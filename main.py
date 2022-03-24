@@ -4,21 +4,49 @@ import random,operator,math
 
 S_REG = 3 # レジスタ数
 LENGTH = 259 # 符号長
-TEST = 100000 # テスト回数
+TEST = 100 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
 
 # 初期化
-tdata = rdata = np.zeros((TEST, LENGTH), dtype=np.int)
+tdata = rdata = prev_s = np.zeros((TEST, LENGTH), dtype=np.int)
 tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=np.int)
+
 state = 0
+
 code = [0,0]
-dist0, dist1, dist2, dist3, dist4, dist5, dist6, dist7 = 0
+##状態と入力が決まると，出力が決まる3次元配列
+output= np.zeros((8,2,2),dtype=np.int)
+output[0,0] = [0,0]
+output[0,1] = [1,1]
+output[1,0] = [1,1]
+output[1,1] = [0,0]
+output[2,0] = [0,1]
+output[2,1] = [1,0]
+output[3,0] = [1,0]
+output[3,1] = [0,1]
+output[4,0] = [1,1]
+output[4,1] = [0,0]
+output[5,0] = [0,0]
+output[5,1] = [1,1]
+output[6,0] = [1,0]
+output[6,1] = [0,1]
+output[7,0] = [0,1]
+output[7,1] = [1,0]
+
+
+#各時間，各状態において，ハミング距離を記録する
+
+h = np.zeros((8,260) ,dtype=np.int)
+
+##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
+
+path = np.zeros((8,260,2),dtype=np.int)
 
 transmit = receive = np.zeros((TEST, OUT_LEN))#LT3ではなく1/Rではないでしょうか？
 array = [['SNR', 'BER']]
-path = './test.csv'  # CSVの書き込みpath．任意で変えて．
+file_path = './test.csv'  # CSVの書き込みpath．任意で変えて．
 
 
 # tdata: 符号化前の送信データ transmission
@@ -50,6 +78,17 @@ def expected_parity(from_state,to_state,k,glist):
     # x[n-1] ... x[n-k-1] comes from from_state
     x = ((to_state >> (S_REG-1)) << (S_REG)) + from_state
     return [xorbits(g & x) for g in glist]
+
+def branch_metric(self,expected,received):
+    pass
+
+def viterbi_step(self,n,received_voltages):
+    pass  
+
+def most_likely_state(self,n):
+    pass 
+
+
 
 def convolutional_encoder(data,state):
   
@@ -119,61 +158,6 @@ def convolutional_encoder(data,state):
     
     return code,state;
 
-# def get_prev_state(data,state):
-    
-#     if state == 0 and data == 0:
-#         return 0
-          
-#     if state == 0 and data == 1:
-#         return 1
-        
-#     if state == 1 and data == 0:
-#         return 2
-        
-#     if state == 1 and data == 1:
-#         return 3
-    
-#     if state == 2 and data == 0:
-#         return 4
-        
-#     if state == 2 and data == 1:
-#         return 5
-    
-#     if state == 3 and data == 0:
-#         return 6
-        
-#     if state == 3 and data == 1:
-#         return 7
-        
-#     if state == 4 and data == 0:
-#         return 0
-        
-#     if state == 4 and data == 1:
-#         return 1
-    
-#     if state == 5 and data == 0:
-#         return 2
-        
-#     if state == 5 and data == 1:
-#         return 3
-    
-#     if state == 6 and data == 0:
-#         return 4
-        
-#     if state == 6 and data == 1:
-#         return 5
-    
-#     if state == 7 and data == 0:
-#         return 6
-        
-#     if state == 7 and data == 1:
-#         return 7
-    
-    
-    
-    
-    
-
 
 if __name__ == '__main__':
     # 表示
@@ -214,9 +198,122 @@ if __name__ == '__main__':
         # ビタビ復号
         for i in range(TEST):
             for j in range(LENGTH):
+                if(j == 1):
+                    continue
+                else:
+                    ##時刻jにおいて，
+                    # dpの実装
+                    r_pair = [0]*2
+                    
+                    #2bit受信信号
+                    r_pair  = np.append(rcode[i][2*j],rcode[i][2*j+1]) 
+                                
+                    #8状態においてハミング距離更新かつパスの記録
+                    
+                    #状態0
+                    if (h[0][j-1] + hamming(output[0][0],r_pair)) <  (h[4][j-1] + hamming(output[4][0],r_pair)):
+                        h[0][j] = h[0][j-1] + hamming(output[0][0],r_pair)#状態0時刻jのハミング距離を求める
+                        path[0][j] = [0,0] # 状態0に来るパスは状態0からの入力0
+                        
+                    else:
+                        h[0][j] =(h[4][j-1] + hamming(output[4][0],r_pair))
+                        path[0][j] = [4,0]# 状態0に来るパスは状態4からの入力0
+                    
+                    #状態1
+                    if (h[0][j-1] + hamming(output[0][1],r_pair)) <  (h[4][j-1] + hamming(output[4][1],r_pair)):#状態1時刻jのハミング距離を求める
+                        h[1][j] = h[1][j-1] + hamming(output[0][1],r_pair)
+                        path[1][j] = [0,1] #状態1に来るパスは，状態0からの入力1
+                        
+                    else:
+                        h[1][j] =(h[4][j-1] + hamming(output[4][1],r_pair))#状態1時刻jのハミング距離を求める
+                        path[1][j] = [4,1]#状態1に来るパスは，状態4からの入力1
+                    
+                    ##状態2
+                    
+                    if (h[1][j-1]+hamming(output[1][0],r_pair)) <(h[5][j-1] + hamming(output[5][0],r_pair)):
+                        h[2][j] = h[1][j-1]+hamming(output[1][0],r_pair)
+                        path[2][j]  = [1,0]
+                        
+                    else:
+                        h[2][j] = h[5][j-1] + hamming(output[5][0],r_pair)
+                        path[2][j]  =[5,0]
+                    
+                    
+                    ##状態3
+                    
+                    if (h[1][j-1]+hamming(output[1][1],r_pair)) <(h[5][j-1] + hamming(output[5][1],r_pair)):
+                        h[3][j] = h[1][j-1]+hamming(output[1][1],r_pair)
+                        path[3][j]  = [1,1]
+                        
+                    else:
+                        h[3][j] = h[5][j-1] + hamming(output[5][1],r_pair)
+                        path[3][j]  =[5,1]
+                    
+                    ##状態4
+                    
+                    if (h[2][j-1]+hamming(output[2][0],r_pair)) <(h[6][j-1] + hamming(output[6][0],r_pair)):
+                        h[4][j] = h[2][j-1]+hamming(output[2][0],r_pair)
+                        path[4][j]  = [2,0]
+                        
+                    else:
+                        h[4][j] = h[6][j-1] + hamming(output[6][0],r_pair)
+                        path[4][j]  =[6,0]
+                    
+                     ##状態5
+                    
+                    if (h[2][j-1]+hamming(output[2][1],r_pair)) <(h[6][j-1] + hamming(output[6][1],r_pair)):
+                        h[5][j] = h[2][j-1]+hamming(output[2][1],r_pair)
+                        path[5][j]  = [2,1]
+                        
+                    else:
+                        h[5][j] =h[6][j-1] + hamming(output[6][1],r_pair)
+                        path[5][j]  =[6,1]
+                    
+                    
+                    ##状態6
+                    
+                    if (h[3][j-1]+hamming(output[3][0],r_pair)) <(h[7][j-1] + hamming(output[7][0],r_pair)):
+                        h[6][j] = h[3][j-1]+hamming(output[3][0],r_pair)
+                        path[6][j]  = [3,0]
+                        
+                    else:
+                        h[6][j] =h[7][j-1] + hamming(output[7][0],r_pair)
+                        path[6][j]  =[7,0]
+                        
+                    ##状態7
+                    
+                    if (h[3][j-1]+hamming(output[3][1],r_pair)) <(h[7][j-1] + hamming(output[7][1],r_pair)):
+                        h[7][j] = h[3][j-1]+hamming(output[3][1],r_pair)
+                        path[7][j]  = [3,1]
+                        
+                    else:
+                        h[7][j] =h[7][j-1] + hamming(output[7][1],r_pair)
+                        path[7][j]  =[7,1]
+                    
+            for t in reversed(range(259)):
+                if(t==258):
+                    rdata[i][t] = path[0][t][1]
+                    prev_s[i][t] = path[0][t][0]
+                else:
+                    rdata[i][t] = path[prev_s[i][t]][t][1]
+                    prev_s[i][t] = path[prev_s[i][t]][t][0]
                 
-    
-                code,state = convolutional_encoder(tdata[i][j],state)
+                        
+                        
+                     
+                    ##template
+                    
+                    # if (h[状態a][j-1]+hamming(output[状態a][入力a],r_pair)) <(h[状態b][j-1] + hamming(output[状態b][入力b],r_pair)):
+                    #     h[2][j] = 前者
+                    #     path[2][j]  = [状態a,入力a]
+                        
+                    # else:
+                    #     h[2][j] =後者
+                    #     path[2][j]  =[状態b,入力b]
+                    
+                    
+                    ##最小経路選択
+                
                 
 
         # 誤り回数計算
@@ -231,6 +328,6 @@ if __name__ == '__main__':
 
         # CSV書き込み．コメントアウト解除すれば書き込める
         array.append([SNRdB, BER])
-        with open(path, 'w') as f:
+        with open(file_path, 'w') as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerows(array)
