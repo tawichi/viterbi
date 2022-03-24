@@ -4,7 +4,7 @@ import random,operator,math
 
 S_REG = 3 # レジスタ数
 LENGTH = 259 # 符号長
-TEST = 1000 # テスト回数
+TEST = 100000 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
@@ -44,7 +44,7 @@ h = np.zeros((8,260) ,dtype=np.int)
 
 path = np.zeros((8,260,2),dtype=np.int)
 
-transmit = receive = np.zeros((TEST, OUT_LEN))#LT3ではなく1/Rではないでしょうか？
+transmit = receive = np.zeros((TEST, OUT_LEN))
 array = [['SNR', 'BER']]
 file_path = './test.csv'  # CSVの書き込みpath．任意で変えて．
 
@@ -91,7 +91,7 @@ def most_likely_state(self,n):
 
 
 def convolutional_encoder(data,state):
-  
+    # 状態と入力から，出力と次の状態を返す
     if state == 0 and data == 0:
         code=[0,0]
         state = 0
@@ -167,6 +167,7 @@ if __name__ == '__main__':
     for SNRdB in np.arange(0, 6.25, 0.25):
         # 送信データの生成
         tdata = np.random.randint(0, 2, (TEST, LENGTH - S_REG))#送信データをランダムのバイナリで生成
+        rdata = prev_s = np.zeros((TEST, LENGTH), dtype=np.int)
 
         # 終端ビット系列の付加
         end = np.zeros((TEST, S_REG), dtype=np.int)
@@ -180,6 +181,7 @@ if __name__ == '__main__':
                     state =0
                 else:
                     code,state = convolutional_encoder(tdata[i][j],state)
+                #print(tdata[i][j])
                 
                 tcode[i][2*j] = code[0]
                 tcode[i][2*j+1] = code[1]
@@ -293,13 +295,15 @@ if __name__ == '__main__':
             for t in reversed(range(259)):
                 if(t==258):
                     rdata[i][t] = path[0][t][1]
-                    prev_s[i][t] = path[0][t][0]
+                    prev = path[0][t][0]
                 else:
-                    rdata[i][t] = path[prev_s[i][t]][t][1]
-                    prev_s[i][t] = path[prev_s[i][t]][t][0]
+                    #復元データはpath
+                    rdata[i][t] = path[prev][t][1]
+                    prev = path[prev][t][0]
                 
-                        
-                        
+                
+                            
+                      
                      
                     ##template
                     
@@ -313,9 +317,7 @@ if __name__ == '__main__':
                     
                     
                     ##最小経路選択
-                
-                
-
+                    #print(rdata)
         # 誤り回数計算
         ok = np.count_nonzero(rdata == tdata)
         error = rdata.size - ok
@@ -325,9 +327,10 @@ if __name__ == '__main__':
 
         # 結果表示
         print('SNR: {0:.2f}, BER: {1:.4e}'.format(SNRdB, BER))
-
+        #print(rdata)
         # CSV書き込み．コメントアウト解除すれば書き込める
-        array.append([SNRdB, BER])
+        #array.append([SNRdB, BER])
+        array.append([tdata,rdata])
         with open(file_path, 'w') as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerows(array)
