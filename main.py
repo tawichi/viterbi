@@ -4,7 +4,7 @@ import random,operator,math
 
 S_REG = 3 # レジスタ数
 LENGTH = 259 # 符号長
-TEST = 100 # テスト回数
+TEST = 1000 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
