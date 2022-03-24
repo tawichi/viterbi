@@ -119,55 +119,55 @@ def convolutional_encoder(data,state):
     
     return code,state;
 
-#def get_prev_state(data,state):
+# def get_prev_state(data,state):
     
-    if state == 0 and data == 0:
-        return 0
+#     if state == 0 and data == 0:
+#         return 0
           
-    if state == 0 and data == 1:
-        return 1
+#     if state == 0 and data == 1:
+#         return 1
         
-    if state == 1 and data == 0:
-        return 2
+#     if state == 1 and data == 0:
+#         return 2
         
-    if state == 1 and data == 1:
-        return 3
+#     if state == 1 and data == 1:
+#         return 3
     
-    if state == 2 and data == 0:
-        return 4
+#     if state == 2 and data == 0:
+#         return 4
         
-    if state == 2 and data == 1:
-        return 5
+#     if state == 2 and data == 1:
+#         return 5
     
-    if state == 3 and data == 0:
-        return 6
+#     if state == 3 and data == 0:
+#         return 6
         
-    if state == 3 and data == 1:
-        return 7
+#     if state == 3 and data == 1:
+#         return 7
         
-    if state == 4 and data == 0:
-        return 0
+#     if state == 4 and data == 0:
+#         return 0
         
-    if state == 4 and data == 1:
-        return 1
+#     if state == 4 and data == 1:
+#         return 1
     
-    if state == 5 and data == 0:
-        return 2
+#     if state == 5 and data == 0:
+#         return 2
         
-    if state == 5 and data == 1:
-        return 3
+#     if state == 5 and data == 1:
+#         return 3
     
-    if state == 6 and data == 0:
-        return 4
+#     if state == 6 and data == 0:
+#         return 4
         
-    if state == 6 and data == 1:
-        return 5
+#     if state == 6 and data == 1:
+#         return 5
     
-    if state == 7 and data == 0:
-        return 6
+#     if state == 7 and data == 0:
+#         return 6
         
-    if state == 7 and data == 1:
-        return 7
+#     if state == 7 and data == 1:
+#         return 7
     
     
     
