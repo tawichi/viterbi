@@ -182,14 +182,23 @@ if __name__ == '__main__':
                 if(j == 1):
                     continue
                 else:
-                    ##時刻jにおいて，
-                    # dpの実装
+                    #r_pair 受信信号シンボル
                     r_pair = [0]*2
                     
-                    #2bit受信信号
                     r_pair  = np.append(rcode[i][2*j],rcode[i][2*j+1]) 
                                 
                     #8状態においてハミング距離更新かつパスの記録
+                    
+                    
+                    ##template
+                    
+                    # if (h[状態a][j-1]+hamming(output[状態a][入力a],r_pair)) <(h[状態b][j-1] + hamming(output[状態b][入力b],r_pair)):
+                    #     h[2][j] = 前者
+                    #     path[2][j]  = [状態a,入力a]
+                        
+                    # else:
+                    #     h[2][j] =後者
+                    #     path[2][j]  =[状態b,入力b]
                     
                     #状態0
                     if (h[0][j-1] + hamming(output[0][0],r_pair)) <  (h[4][j-1] + hamming(output[4][0],r_pair)):
@@ -279,24 +288,9 @@ if __name__ == '__main__':
                     #復元データはpath
                     rdata[i][t] = path[prev][t][1]# 状態prevの時刻tに向かってくるパスの入力
                     prev = path[prev][t][0]# 状態prevの時刻tに向かってくるパスの状態
-                    
-                    #ブレークポイント；あるdbのあるテストにおける結果をみる
-                    
-                      
-                     
-                    ##template
-                    
-                    # if (h[状態a][j-1]+hamming(output[状態a][入力a],r_pair)) <(h[状態b][j-1] + hamming(output[状態b][入力b],r_pair)):
-                    #     h[2][j] = 前者
-                    #     path[2][j]  = [状態a,入力a]
-                        
-                    # else:
-                    #     h[2][j] =後者
-                    #     path[2][j]  =[状態b,入力b]
+                                       
                     
                     
-                    ##最小経路選択
-                    #print(rdata)
         # 誤り回数計算
         ok = np.count_nonzero(rdata == tdata)
         error = rdata.size - ok
@@ -308,8 +302,8 @@ if __name__ == '__main__':
         print('SNR: {0:.2f}, BER: {1:.4e}'.format(SNRdB, BER))
         #print(rdata)
         # CSV書き込み．コメントアウト解除すれば書き込める
-        #array.append([SNRdB, BER])
-        array.append([tdata,rdata])
+        array.append([SNRdB, BER])
+        #array.append([tdata,rdata])
         with open(file_path, 'w') as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerows(array)
