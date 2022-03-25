@@ -3,11 +3,12 @@ import csv
 import random,operator,math
 
 S_REG = 3 # レジスタ数
-LENGTH = 259 # 符号長
+LENGTH = 5 # 符号長
 TEST = 1 # テスト回数
-OUT = 2
-OUT_LEN = LENGTH*OUT
+OUT_BITS = 2
+OUT_LEN = LENGTH*OUT_BITS
 K = S_REG + 1#拘束長
+STATE_NUM = 8
 
 # 初期化
 tdata = rdata  = np.zeros((TEST, LENGTH), dtype=int)
@@ -18,7 +19,7 @@ state = 0
 
 #状態と入力が決まると，出力が決まる3次元配列
 #output[状態][入力][出力]
-output= np.zeros((8,2,2),dtype=int)
+output= np.zeros((STATE_NUM,2,OUT_BITS),dtype=int)
 output[0,0] = [0,0]
 output[0,1] = [1,1]
 output[1,0] = [1,1]
@@ -39,11 +40,11 @@ output[7,1] = [1,0]
 
 #各時間，各状態において，ハミング距離を記録する
 #h[状態][時刻]
-h = np.zeros((8,LENGTH) ,dtype=int)
+h = np.zeros((STATE_NUM,LENGTH) ,dtype=int)
 
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
 #path[状態][時刻][[前状態,入力]]
-path = np.zeros((8,LENGTH,2),dtype=int)
+path = np.zeros((STATE_NUM,LENGTH,2),dtype=int)
 
 transmit = receive = np.zeros((TEST, OUT_LEN))
 array = [['SNR', 'BER']]
@@ -59,7 +60,7 @@ file_path = './test.csv'  # CSVの書き込みpath．任意で変えて．
 
 def awgn(SNRdB, size):
     #awgnを実装する
-    No = OUT * 1* 10**(-SNRdB/10)
+    No = OUT_BITS * 1* 10**(-SNRdB/10)
     noise = np.random.normal(0, np.sqrt(No / 2), size) + 1j * np.random.normal(0, np.sqrt(No / 2), size)
     return noise
 # compute hamming distance of two bit sequences
@@ -70,6 +71,11 @@ def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 
 def convolutional_encoder(data,state):
     # 状態と入力から，出力と次の状態を返す
+    counter = 0
+    for i in range(STATE_NUM):
+        for j in range(2):
+            pass
+            
     if state == 0 and data == 0:
         state = 0
           
@@ -164,7 +170,7 @@ if __name__ == '__main__':
                     continue
                 else:
                     #r_pair 受信信号シンボル
-                    r_pair = [0]*2
+                    r_pair = [0]*OUT_BITS
                     
                     r_pair  = np.append(rcode[i][2*j],rcode[i][2*j+1]) 
                                 
