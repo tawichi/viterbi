@@ -3,21 +3,21 @@ import csv
 import random,operator,math
 
 S_REG = 3 # レジスタ数
-LENGTH = 259 # 符号長
-TEST = 100000 # テスト回数
+LENGTH = 5 # 符号長
+TEST = 1 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
 
 # 初期化
-tdata = rdata = prev_s = np.zeros((TEST, LENGTH), dtype=np.int)
-tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=np.int)
+tdata = rdata  = np.zeros((TEST, LENGTH), dtype=int)
+tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=int)
 
 state = 0
 
 code = [0,0]
 ##状態と入力が決まると，出力が決まる3次元配列
-output= np.zeros((8,2,2),dtype=np.int)
+output= np.zeros((8,2,2),dtype=int)
 output[0,0] = [0,0]
 output[0,1] = [1,1]
 output[1,0] = [1,1]
@@ -38,11 +38,11 @@ output[7,1] = [1,0]
 
 #各時間，各状態において，ハミング距離を記録する
 
-h = np.zeros((8,260) ,dtype=np.int)
+h = np.zeros((8,LENGTH) ,dtype=int)
 
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
 
-path = np.zeros((8,260,2),dtype=np.int)
+path = np.zeros((8,LENGTH,2),dtype=int)
 
 transmit = receive = np.zeros((TEST, OUT_LEN))
 array = [['SNR', 'BER']]
@@ -66,27 +66,27 @@ def hamming(s1,s2):
     return sum(map(operator.xor,s1,s2))
 
 # 整数の全ビットをまとめてxorする
-def xorbits(n):
-    result = 0
-    while n > 0:
-        result ^= (n & 1)
-        n >>= 1
-    return result
+# def xorbits(n):
+#     result = 0
+#     while n > 0:
+#         result ^= (n & 1)
+#         n >>= 1
+#     return result
 
-def expected_parity(from_state,to_state,k,glist):
-    # x[n] comes from to_state
-    # x[n-1] ... x[n-k-1] comes from from_state
-    x = ((to_state >> (S_REG-1)) << (S_REG)) + from_state
-    return [xorbits(g & x) for g in glist]
+# def expected_parity(from_state,to_state,k,glist):
+#     # x[n] comes from to_state
+#     # x[n-1] ... x[n-k-1] comes from from_state
+#     x = ((to_state >> (S_REG-1)) << (S_REG)) + from_state
+#     return [xorbits(g & x) for g in glist]
 
-def branch_metric(self,expected,received):
-    pass
+# def branch_metric(self,expected,received):
+#     pass
 
-def viterbi_step(self,n,received_voltages):
-    pass  
+# def viterbi_step(self,n,received_voltages):
+#     pass  
 
-def most_likely_state(self,n):
-    pass 
+# def most_likely_state(self,n):
+#     pass 
 
 
 
@@ -164,13 +164,13 @@ if __name__ == '__main__':
     print('# SNR BER:')
 
     # 伝送シミュレーション
-    for SNRdB in np.arange(0, 6.25, 0.25):
+    for SNRdB in reversed(np.arange(0, 6.25, 0.25)):
         # 送信データの生成
         tdata = np.random.randint(0, 2, (TEST, LENGTH - S_REG))#送信データをランダムのバイナリで生成
-        rdata = prev_s = np.zeros((TEST, LENGTH), dtype=np.int)
+        rdata = np.zeros((TEST, LENGTH), dtype=int)
 
         # 終端ビット系列の付加
-        end = np.zeros((TEST, S_REG), dtype=np.int)
+        end = np.zeros((TEST, S_REG), dtype=int)
         tdata= np.append(tdata,end,axis=1)
         
 
@@ -292,17 +292,17 @@ if __name__ == '__main__':
                         h[7][j] =h[7][j-1] + hamming(output[7][1],r_pair)
                         path[7][j]  =[7,1]
                     
-            for t in reversed(range(259)):
-                if(t==258):
+            for t in reversed(range(LENGTH)):
+                if(t == LENGTH - 1):
                     rdata[i][t] = path[0][t][1]
                     prev = path[0][t][0]
                 else:
                     #復元データはpath
-                    rdata[i][t] = path[prev][t][1]
-                    prev = path[prev][t][0]
-                
-                
-                            
+                    rdata[i][t] = path[prev][t][1]# 状態prevの時刻tに向かってくるパスの入力
+                    prev = path[prev][t][0]# 状態prevの時刻tに向かってくるパスの状態
+                    
+                    #ブレークポイント；あるdbのあるテストにおける結果をみる
+                    
                       
                      
                     ##template
