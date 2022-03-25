@@ -1,6 +1,6 @@
 import numpy as np
 import csv
-import random,operator,math
+import operator
 
 S_REG = 3 # レジスタ数
 LENGTH = 5 # 符号長
@@ -63,7 +63,7 @@ def awgn(SNRdB, size):
     No = OUT_BITS * 1* 10**(-SNRdB/10)
     noise = np.random.normal(0, np.sqrt(No / 2), size) + 1j * np.random.normal(0, np.sqrt(No / 2), size)
     return noise
-# compute hamming distance of two bit sequences
+# ハミング距離計算
 def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 
 
@@ -125,9 +125,8 @@ if __name__ == '__main__':
                                 
                     #8状態においてハミング距離更新かつパスの記録
                     
-                    
-                    ##template
-                    
+                    #template
+
                     # if (h[状態a][j-1]+hamming(output[状態a][入力a],r_pair)) <(h[状態b][j-1] + hamming(output[状態b][入力b],r_pair)):
                     #     h[2][j] = 前者
                     #     path[2][j]  = [状態a,入力a]
@@ -137,13 +136,15 @@ if __name__ == '__main__':
                     #     path[2][j]  =[状態b,入力b]
                     
                     #状態0
+                    #左辺の方がパスメトリック小さい場合
                     if (h[0][j-1] + hamming(output[0][0],r_pair)) <  (h[4][j-1] + hamming(output[4][0],r_pair)):
-                        h[0][j] = h[0][j-1] + hamming(output[0][0],r_pair)#状態0時刻jのハミング距離を求める
-                        path[0][j] = [0,0] # 状態0に来るパスは状態0からの入力0
+                        h[0][j] = h[0][j-1] + hamming(output[0][0],r_pair)#ハミング距離更新．(状態0時刻jのハミング距離を求める)
+                        path[0][j] = [0,0] # パスの記録(状態0からの入力0)
                         
+                    #右辺の方がパスメトリック小さい場合   
                     else:
-                        h[0][j] =(h[4][j-1] + hamming(output[4][0],r_pair))
-                        path[0][j] = [4,0]# 状態0に来るパスは状態4からの入力0
+                        h[0][j] = (h[4][j-1] + hamming(output[4][0],r_pair))#ハミング距離更新
+                        path[0][j] = [4,0]#パスの記録，(状態4からの入力0)
                     
                     #状態1
                     if (h[0][j-1] + hamming(output[0][1],r_pair)) <  (h[4][j-1] + hamming(output[4][1],r_pair)):#状態1時刻jのハミング距離を求める
@@ -158,32 +159,32 @@ if __name__ == '__main__':
                     
                     if (h[1][j-1]+hamming(output[1][0],r_pair)) <(h[5][j-1] + hamming(output[5][0],r_pair)):
                         h[2][j] = h[1][j-1]+hamming(output[1][0],r_pair)
-                        path[2][j]  = [1,0]
+                        path[2][j] = [1,0]
                         
                     else:
                         h[2][j] = h[5][j-1] + hamming(output[5][0],r_pair)
-                        path[2][j]  =[5,0]
+                        path[2][j] = [5,0]
                     
                     
                     ##状態3
                     
                     if (h[1][j-1]+hamming(output[1][1],r_pair)) <(h[5][j-1] + hamming(output[5][1],r_pair)):
                         h[3][j] = h[1][j-1]+hamming(output[1][1],r_pair)
-                        path[3][j]  = [1,1]
+                        path[3][j] = [1,1]
                         
                     else:
                         h[3][j] = h[5][j-1] + hamming(output[5][1],r_pair)
-                        path[3][j]  =[5,1]
+                        path[3][j] = [5,1]
                     
                     ##状態4
                     
                     if (h[2][j-1]+hamming(output[2][0],r_pair)) <(h[6][j-1] + hamming(output[6][0],r_pair)):
                         h[4][j] = h[2][j-1]+hamming(output[2][0],r_pair)
-                        path[4][j]  = [2,0]
+                        path[4][j] = [2,0]
                         
                     else:
                         h[4][j] = h[6][j-1] + hamming(output[6][0],r_pair)
-                        path[4][j]  =[6,0]
+                        path[4][j] = [6,0]
                     
                      ##状態5
                     
@@ -215,7 +216,8 @@ if __name__ == '__main__':
                     else:
                         h[7][j] =h[7][j-1] + hamming(output[7][1],r_pair)
                         path[7][j]  =[7,1]
-                    
+            
+            #復号系列を求める    
             for t in reversed(range(LENGTH)):
                 if(t == LENGTH - 1):
                     rdata[i][t] = path[0][t][1]
