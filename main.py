@@ -149,7 +149,7 @@ if __name__ == '__main__':
                     
                     #状態1
                     if (h[0][j-1] + hamming(output[0][1],r_pair)) <  (h[4][j-1] + hamming(output[4][1],r_pair)):#状態1時刻jのハミング距離を求める
-                        h[1][j] = h[1][j-1] + hamming(output[0][1],r_pair)
+                        h[1][j] = h[0][j-1] + hamming(output[0][1],r_pair)
                         path[1][j] = [0,1] #状態1に来るパスは，状態0からの入力1
                         
                     else:
