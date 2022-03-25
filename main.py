@@ -56,7 +56,7 @@ output[7,1] = [1,0]
 
 #各時間，各状態において，ハミング距離を記録する
 #h[状態][時刻]
-h = np.zeros((STATE_NUM,LENGTH) ,dtype=int)
+h = np.zeros((STATE_NUM,LENGTH + 1) ,dtype=int)
 
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
 #path[状態][時刻][[前状態,入力]]
