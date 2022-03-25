@@ -1,3 +1,4 @@
 import numpy as np
-r_pair  = np.append([0,1],[2,3])
-print(r_pair) 
+c= [1,0]
+a,b = c
+print(b)

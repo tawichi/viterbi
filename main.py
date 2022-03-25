@@ -4,7 +4,7 @@ import random,operator,math
 
 S_REG = 3 # レジスタ数
 LENGTH = 259 # 符号長
-TEST = 100 # テスト回数
+TEST = 1 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
@@ -15,7 +15,6 @@ tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=int)
 
 state = 0
 
-code = [0,0]
 
 #状態と入力が決まると，出力が決まる3次元配列
 #output[状態][入力][出力]
@@ -72,70 +71,54 @@ def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 def convolutional_encoder(data,state):
     # 状態と入力から，出力と次の状態を返す
     if state == 0 and data == 0:
-        code=[0,0]
         state = 0
           
     if state == 0 and data == 1:
-        code = [1,1]
         state = 1
         
     if state == 1 and data == 0:
-        code = [1,1]
         state = 2
         
     if state == 1 and data == 1:
-        code = [0,0]
         state = 3
     
     if state == 2 and data == 0:
-        code = [0,1]
         state = 4
         
     if state == 2 and data == 1:
-        code = [1,0]
         state = 5
     
     if state == 3 and data == 0:
-        code = [1,0]
         state = 6
         
     if state == 3 and data == 1:
-        code = [0,1]
         state = 7
         
     if state == 4 and data == 0:
-        code = [1,1]
         state = 0
         
     if state == 4 and data == 1:
-        code = [0,0]
         state = 1
     
     if state == 5 and data == 0:
-        code = [0,0]
         state = 2
         
     if state == 5 and data == 1:
-        code = [1,1]
         state = 3
     
     if state == 6 and data == 0:
-        code = [1,0]
         state = 4
         
     if state == 6 and data == 1:
-        code = [0,1]
         state = 5
     
     if state == 7 and data == 0:
-        code = [0,1]
         state = 6
         
     if state == 7 and data == 1:
-        code = [1,0]
         state = 7
     
-    return code,state;
+    return state;
 
 
 if __name__ == '__main__':
@@ -159,11 +142,9 @@ if __name__ == '__main__':
                 if j == 0:
                     state =0
                 else:
-                    code,state = convolutional_encoder(tdata[i][j],state)
-                #print(tdata[i][j])
-                
-                tcode[i][2*j] = code[0]
-                tcode[i][2*j+1] = code[1]
+                    tcode[i][2*j], tcode[i][2*j+1] = output[state][tdata[i][j]]
+                    state = convolutional_encoder(tdata[i][j],state)
+                    
 
         # BPSK変調
         transmit[tcode == 0] = -1
