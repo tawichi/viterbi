@@ -116,7 +116,7 @@ if __name__ == '__main__':
         # ビタビ復号
         for i in range(TEST):
             for j in range(LENGTH):
-                if(j == 1):
+                if(j == 0):
                     continue
                 else:
                     #r_pair 受信信号シンボル
