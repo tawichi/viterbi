@@ -1,10 +1,11 @@
 import numpy as np
 import csv
 import operator
+import matplotlib.pyplot as plt
 
 S_REG = 3 #レジスタ数
 LENGTH = 259 #符号長
-TEST = 1 #テスト回数
+TEST = 100000 #テスト回数
 OUT_BITS = 2
 OUT_LEN = LENGTH*OUT_BITS
 K = S_REG + 1 #拘束長
@@ -31,6 +32,8 @@ def convolutional_encoder(data,state):
 tdata = rdata  = np.zeros((TEST, LENGTH), dtype=int)
 tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=int)
 state = 0
+snr_list = []
+ber_list = []
 
 
 #状態と入力が決まると，出力が決まる3次元配列
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     print('# SNR BER:')
 
     # 伝送シミュレーション
-    for SNRdB in reversed(np.arange(0, 6.25, 0.25)):
+    for SNRdB in np.arange(0, 6.25, 0.25):
         # 送信データの生成
         tdata = np.random.randint(0, 2, (TEST, LENGTH - S_REG))#送信データをランダムのバイナリで生成
         rdata = np.zeros((TEST, LENGTH), dtype=int)
@@ -116,13 +119,30 @@ if __name__ == '__main__':
         # ビタビ復号
         for i in range(TEST):
             for j in range(LENGTH):
-                if(j == 0):
-                    continue
-                else:
-                    #r_pair 受信信号シンボル
-                    r_pair = [0]*OUT_BITS
+                r_pair = [0]*OUT_BITS
                     
-                    r_pair  = np.append(rcode[i][2*j],rcode[i][2*j+1]) 
+                r_pair  = np.append(rcode[i][2*j],rcode[i][2*j+1]) 
+                
+    
+                if(j == 0):
+                    h[0][1] = h[0][0] + hamming(output[0][0],r_pair)
+                    h[1][1] = h[0][0] + hamming(output[0][1],r_pair)
+                    path[0][0] = [0,0]
+                    path[1][0] = [0,1]
+                    
+                if(j == 1): 
+                    h[0][2] = h[0][1] + hamming(output[0][0],r_pair)
+                    h[1][2] = h[0][1] + hamming(output[0][1],r_pair)
+                    h[2][2] = h[1][1] + hamming(output[1][0],r_pair)
+                    h[3][2] = h[1][1] * hamming(output[1][1],r_pair)
+                    path[0][j] = [0,0]
+                    path[1][j] = [0,1]
+                    path[2][j] = [1,0]
+                    path[3][j] = [1,1]
+
+                    
+                
+                else:
                                 
                     #8状態においてハミング距離更新かつパスの記録
                     
@@ -236,6 +256,9 @@ if __name__ == '__main__':
 
         # BER計算
         BER = error / (ok + error)
+        
+        snr_list.append(SNRdB)
+        ber_list.append(BER)
 
         # 結果表示
         print('SNR: {0:.2f}, BER: {1:.4e}'.format(SNRdB, BER))
@@ -246,3 +269,12 @@ if __name__ == '__main__':
         with open(file_path, 'w') as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerows(array)
+fig = plt.figure()
+plt.plot(snr_list, ber_list)
+
+ax = plt.gca()
+ax.set_yscale('log') 
+plt.xlabel('E_b/N_0')
+plt.ylabel('BER')
+fig.savefig("img.png")
+plt.show()
