@@ -3,7 +3,7 @@ import csv
 import operator
 
 S_REG = 3 #レジスタ数
-LENGTH = 5 #符号長
+LENGTH = 259 #符号長
 TEST = 1 #テスト回数
 OUT_BITS = 2
 OUT_LEN = LENGTH*OUT_BITS
