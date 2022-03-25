@@ -2,18 +2,34 @@ import numpy as np
 import csv
 import operator
 
-S_REG = 3 # レジスタ数
-LENGTH = 5 # 符号長
-TEST = 1 # テスト回数
+S_REG = 3 #レジスタ数
+LENGTH = 5 #符号長
+TEST = 1 #テスト回数
 OUT_BITS = 2
 OUT_LEN = LENGTH*OUT_BITS
-K = S_REG + 1#拘束長
+K = S_REG + 1 #拘束長
 STATE_NUM = 8
+
+def awgn(SNRdB, size):
+    No = OUT_BITS * 1* 10**(-SNRdB/10)
+    noise = np.random.normal(0, np.sqrt(No / 2), size) + 1j * np.random.normal(0, np.sqrt(No / 2), size)
+    return noise
+
+
+def hamming(s1,s2):   
+    # ハミング距離計算
+    return sum(map(operator.xor,s1,s2))
+
+
+def convolutional_encoder(data,state):
+    # 状態と入力から，次の状態を返す
+    # 状態遷移図の規則性を活用
+    state = (2 * state + data) % 8
+    return state;
 
 # 初期化
 tdata = rdata  = np.zeros((TEST, LENGTH), dtype=int)
 tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=int)
-
 state = 0
 
 
@@ -58,22 +74,7 @@ file_path = './test.csv'  # CSVの書き込みpath．任意で変えて．
 # transmit: 送信信号
 # receive: 受信信号
 
-def awgn(SNRdB, size):
-    #awgnを実装する
-    No = OUT_BITS * 1* 10**(-SNRdB/10)
-    noise = np.random.normal(0, np.sqrt(No / 2), size) + 1j * np.random.normal(0, np.sqrt(No / 2), size)
-    return noise
-# ハミング距離計算
-def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 
-
-
-
-def convolutional_encoder(data,state):
-    # 状態と入力から，次の状態を返す
-    # 状態遷移図の規則性を活用
-    state = (2 * state + data) % 8
-    return state;
 
 
 if __name__ == '__main__':
