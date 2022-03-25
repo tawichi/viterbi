@@ -3,8 +3,8 @@ import csv
 import random,operator,math
 
 S_REG = 3 # レジスタ数
-LENGTH = 5 # 符号長
-TEST = 1 # テスト回数
+LENGTH = 259 # 符号長
+TEST = 100 # テスト回数
 OUT = 2
 OUT_LEN = LENGTH*OUT
 K = S_REG + 1#拘束長
@@ -16,7 +16,9 @@ tcode = rcode = np.zeros((TEST, OUT_LEN), dtype=int)
 state = 0
 
 code = [0,0]
-##状態と入力が決まると，出力が決まる3次元配列
+
+#状態と入力が決まると，出力が決まる3次元配列
+#output[状態][入力][出力]
 output= np.zeros((8,2,2),dtype=int)
 output[0,0] = [0,0]
 output[0,1] = [1,1]
@@ -37,11 +39,11 @@ output[7,1] = [1,0]
 
 
 #各時間，各状態において，ハミング距離を記録する
-
+#h[状態][時刻]
 h = np.zeros((8,LENGTH) ,dtype=int)
 
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
-
+#path[状態][時刻][[前状態,入力]]
 path = np.zeros((8,LENGTH,2),dtype=int)
 
 transmit = receive = np.zeros((TEST, OUT_LEN))
@@ -62,31 +64,8 @@ def awgn(SNRdB, size):
     noise = np.random.normal(0, np.sqrt(No / 2), size) + 1j * np.random.normal(0, np.sqrt(No / 2), size)
     return noise
 # compute hamming distance of two bit sequences
-def hamming(s1,s2):
-    return sum(map(operator.xor,s1,s2))
+def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 
-# 整数の全ビットをまとめてxorする
-# def xorbits(n):
-#     result = 0
-#     while n > 0:
-#         result ^= (n & 1)
-#         n >>= 1
-#     return result
-
-# def expected_parity(from_state,to_state,k,glist):
-#     # x[n] comes from to_state
-#     # x[n-1] ... x[n-k-1] comes from from_state
-#     x = ((to_state >> (S_REG-1)) << (S_REG)) + from_state
-#     return [xorbits(g & x) for g in glist]
-
-# def branch_metric(self,expected,received):
-#     pass
-
-# def viterbi_step(self,n,received_voltages):
-#     pass  
-
-# def most_likely_state(self,n):
-#     pass 
 
 
 
