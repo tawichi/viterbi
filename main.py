@@ -70,60 +70,9 @@ def hamming(s1,s2):    return sum(map(operator.xor,s1,s2))
 
 
 def convolutional_encoder(data,state):
-    # 状態と入力から，出力と次の状態を返す
-    counter = 0
-    for i in range(STATE_NUM):
-        for j in range(2):
-            pass
-            
-    if state == 0 and data == 0:
-        state = 0
-          
-    if state == 0 and data == 1:
-        state = 1
-        
-    if state == 1 and data == 0:
-        state = 2
-        
-    if state == 1 and data == 1:
-        state = 3
-    
-    if state == 2 and data == 0:
-        state = 4
-        
-    if state == 2 and data == 1:
-        state = 5
-    
-    if state == 3 and data == 0:
-        state = 6
-        
-    if state == 3 and data == 1:
-        state = 7
-        
-    if state == 4 and data == 0:
-        state = 0
-        
-    if state == 4 and data == 1:
-        state = 1
-    
-    if state == 5 and data == 0:
-        state = 2
-        
-    if state == 5 and data == 1:
-        state = 3
-    
-    if state == 6 and data == 0:
-        state = 4
-        
-    if state == 6 and data == 1:
-        state = 5
-    
-    if state == 7 and data == 0:
-        state = 6
-        
-    if state == 7 and data == 1:
-        state = 7
-    
+    # 状態と入力から，次の状態を返す
+    # 状態遷移図の規則性を活用
+    state = (2 * state + data) % 8
     return state;
 
 
