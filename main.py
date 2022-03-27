@@ -3,6 +3,8 @@ import numpy as np
 import csv
 import operator
 import matplotlib.pyplot as plt
+import math
+from scipy import special
 
 S_REG = 3  # レジスタ数
 LENGTH = 259  # 符号長
@@ -32,6 +34,9 @@ def convolutional_encoder(data, state):
     state = (2 * state + data) % 8
     return state
 
+def combinations_count(n, r):
+    return math.factorial(n) // (math.factorial(n - r) * math.factorial(r))
+
 
 # 初期化
 tdata = rdata = np.zeros((TEST, LENGTH), dtype=int)
@@ -40,6 +45,7 @@ state = 0
 snr_list = []
 ber_list = []
 nocode_ber_list = []
+p_b_list = []
 
 # 各時間，各状態において，ハミング距離を記録する
 # h[状態][時刻]
@@ -70,7 +76,7 @@ output[6, 1] = [0, 1]
 output[7, 0] = [0, 1]
 output[7, 1] = [1, 0]
 
-array = [["SNR", "BER", "NOCODE_BER"]]
+array = [["SNR", "BER", "NOCODE_BER","p_b"]]
 file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 
 # tdata: 符号化前の送信データ transmission
@@ -111,7 +117,7 @@ if __name__ == "__main__":
         nocode_transmit[tdata == 1] = 1
 
         # 伝送
-        receive = transmit  # + awgn(SNRdB, (TEST, OUT_LEN))
+        receive = transmit + awgn(SNRdB, (TEST, OUT_LEN))
         nocode_receive = nocode_transmit + awgn(SNRdB, (TEST, LENGTH))
 
         # BPSK復調
@@ -132,41 +138,22 @@ if __name__ == "__main__":
                     h[0][0] = 0
                     h[0][1] = h[0][0] + hamming(output[0][0], r_pair)
                     h[1][1] = h[0][0] + hamming(output[0][1], r_pair)
-                    
-                    path[0][0] = [0, 0]
-                    path[1][0] = [0, 1]
-                    h[0][2] = h[0][1] + hamming(output[0][0], r_pair)
-                    h[1][2] = h[0][1] + hamming(output[0][1], r_pair)
-                    h[2][2] = h[1][1] + hamming(output[1][0], r_pair)
-                    h[3][2] = h[1][1] + hamming(output[1][1], r_pair)
-                    
-                    path[0][1] = [0, 0]
-                    path[1][1] = [0, 1]
-                    path[2][1] = [1, 0]
-                    path[3][1] = [1, 1]
-                     
-                    h[0][3] = h[0][2] + hamming(output[0][0], r_pair)
-                    h[1][3] = h[0][2] + hamming(output[0][1], r_pair)
-                    h[2][3] = h[1][2] + hamming(output[1][0], r_pair)
-                    h[3][3] = h[1][2] + hamming(output[1][1], r_pair)
-                    h[4][3] = h[2][2] + hamming(output[2][0], r_pair)
-                    h[5][3] = h[2][2] + hamming(output[2][1], r_pair)
-                    h[6][3] = h[3][3] + hamming(output[3][0], r_pair)
-                    h[7][3] = h[3][3] + hamming(output[3][1], r_pair)
-                    
-                    path[0][2] = [0,0]
-                    path[1][2] = [0,1]
-                    path[2][2] = [1,0]
-                    path[3][2] = [1,1]
-                    path[4][2] = [2,0]
-                    path[5][2] = [2,1]
-                    path[6][2] = [3,0]
-                    path[7][2] = [3,1]
-                    
-                    
+
+                    # h[0][2] = h[0][1] + hamming(output[0][0], r_pair)
+                    # h[1][2] = h[0][1] + hamming(output[0][1], r_pair)
+                    # h[2][2] = h[1][1] + hamming(output[1][0], r_pair)
+                    # h[3][2] = h[1][1] + hamming(output[1][1], r_pair)
+
+                    # h[0][3] = h[0][2] + hamming(output[0][0], r_pair)
+                    # h[1][3] = h[0][2] + hamming(output[0][1], r_pair)
+                    # h[2][3] = h[1][2] + hamming(output[1][0], r_pair)
+                    # h[3][3] = h[1][2] + hamming(output[1][1], r_pair)
+                    # h[4][3] = h[2][2] + hamming(output[2][0], r_pair)
+                    # h[5][3] = h[2][2] + hamming(output[2][1], r_pair)
+                    # h[6][3] = h[3][3] + hamming(output[3][0], r_pair)
+                    # h[7][3] = h[3][3] + hamming(output[3][1], r_pair)
 
                 else:
-                    
 
                     # 8状態においてハミング距離更新かつパスの記録
 
@@ -282,13 +269,29 @@ if __name__ == "__main__":
                         h[7][j] = h[7][j - 1] + hamming(output[7][1], r_pair)
                         path[7][j] = [7, 1]
 
+                # path[0][0] = [0, 0]
+                # path[1][0] = [0, 1]
+                # path[0][1] = [0, 0]
+                # path[1][1] = [0, 1]
+                # path[2][1] = [1, 0]
+                # path[3][1] = [1, 1]
+
+                # path[0][2] = [0,0]
+                # path[1][2] = [0,1]
+                # path[2][2] = [1,0]
+                # path[3][2] = [1,1]
+                # path[4][2] = [2,0]
+                # path[5][2] = [2,1]
+                # path[6][2] = [3,0]
+                # path[7][2] = [3,1]
+
             # 復号系列を求める
             for t in reversed(range(LENGTH)):
                 if t == LENGTH - 1:
                     rdata[i][t] = path[0][t][1]
                     prev = path[0][t][0]
                 elif t == 0:
-                    rdata[i][t] = path[prev][0][1]
+                    rdata[i][t] = tdata[i][t]
                 else:
                     # 復元データはpath
                     rdata[i][t] = path[prev][t][1]  # 状態prevの時刻t+1に向かってくるパスの入力
@@ -297,7 +300,7 @@ if __name__ == "__main__":
         # 誤り回数計算
         ok = np.count_nonzero(rdata == tdata)
         error = rdata.size - ok
-        print("error:",error)
+        print("error:", error)
 
         nocode_ok = np.count_nonzero(nocode_demo == tdata)
         nocode_error = rdata.size - nocode_ok
@@ -308,7 +311,6 @@ if __name__ == "__main__":
 
         snr_list.append(SNRdB)
         ber_list.append(BER)
-
         nocode_ber_list.append(NOCODE_BER)
 
         # 結果表示
@@ -325,9 +327,34 @@ if __name__ == "__main__":
         with open(file_path, "w") as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerows(array)
+            
+        
+                
 fig = plt.figure()
 plt.plot(snr_list, ber_list, label="simulation(hard)", color="blue")
 plt.plot(snr_list, nocode_ber_list, label="without code", color="red")
+# plt.plot(snr_list, p_b_list, label="p_b", color="green")
+
+
+##理論上界
+# x = np.linspace(0,6) #x = SNR
+# p_b = 0.0
+
+# p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10**(x/10)))
+       
+# for k in range(17):
+#     if( k%2 == 0):
+#         for e in range(k // 2 + 1,k):
+#             p_b +=  combinations_count(k,e) * p**(e) * (1 - p) ** (k - e) + 0.5 * combinations_count(k,k//2) * p ** (2//k) * (1 - p) ** (k // 2)
+#     else:
+#         for e in range((k + 1) // 2, k):
+#             p_b +=combinations_count(k,e) * p **(e) * (1 - p) ** (k - e)
+# plt.plot(x, p_b)
+
+
+        
+    
+
 
 ax = plt.gca()
 ax.set_yscale("log")
