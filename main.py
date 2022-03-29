@@ -7,13 +7,13 @@ import math
 import random
 from scipy import special
 
-S_REG = 3  # レジスタ数
+S_REG = 3  # レジスタ数(前後半共通)
 LENGTH = 259  # 符号長
 TEST = 1000  # テスト回数
-OUT_BITS = 2
+OUT_BITS = 2 #後半組は3
 OUT_LEN = LENGTH * OUT_BITS
-K = S_REG + 1  # 拘束長
-STATE_NUM = 8
+K = S_REG + 1  # 拘束長は4(前後半共通)
+STATE_NUM = 8 #後半組は16
 
 
 def awgn(SNRdB, size):
@@ -312,11 +312,11 @@ if __name__ == "__main__":
         
         #理論上界計算
 
-        p_k = [0] * 14
+        p_k = [0] * 14 #後半組は18にする
 
         p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10**(SNRdB/10)))
             
-        for k in range(6,14):
+        for k in range(6,14): #後半組はrange(10,18)
             if( k%2 == 0):
                 for e in range(k // 2 + 1,k):
                     p_k[k] = combinations_count(k,e) * p **(e) * (1 - p) ** (k - e) 
@@ -330,7 +330,8 @@ if __name__ == "__main__":
         p_b = 0
 
         p_b = 2 * p_k[6] + 7 * p_k[7] + 18 * p_k[8] + 49 * p_k[9] + 130 * p_k[10] + 333 * p_k[11] + 836 * p_k[12] + 2069 * p_k[13] 
-        #2P6 + 7P7 + 18P8 + 49P9 + 130P10 + 333P11 + 836P12 + 2069P13
+        #後半組は以下のように書き換え
+        #p_b = p_b = 6 * p_k[10] + 0 * p_k[11] + 6 * p_k[12] + 0 * p_k[13] + 58 * p_k[14] + 0 * p_k[15] + 118 * p_k[16] + 0 * p_k[17] 
         if p_b >= 1 / 2:
             p_b = 1 / 2
         p_b_list.append(p_b)
@@ -362,34 +363,6 @@ plt.plot(snr_list, ber_list, label="simulation(hard)", color="blue")
 plt.plot(snr_list, nocode_ber_list, label="without code", color="red")
 plt.plot(snr_list, p_b_list, label="p_k", color="green")
 
-
-# #理論上界
-# x = np.linspace(0,6) #x = SNR
-
-# p_k = [0] * 14
-
-# p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10**(x/10)))
-       
-# for k in range(6,14):
-#     if( k%2 == 0):
-#         for e in range(k // 2 + 1,k):
-#             p_k[k] = combinations_count(k,e) * p **(e) * (1 - p) ** (k - e) 
-#             residual =  0.5 * combinations_count(k,k//2) * p ** (k//2) * (1 - p) ** (k// 2)
-#             p_k[k] += residual
-#     else:
-#         for e in range((k + 1) // 2, k):
-#             p_k[k] = (combinations_count(k,e) * p **(e) * (1 - p) ** (k - e))
-# #plt.plot(x, p_k)
-
-# p_b = 0
-
-# p_b = 2 * p_k[6] + 7 * p_k[7] + 18 * p_k[8] + 49 * p_k[9] + 130 * p_k[10] + 333 * p_k[11] + 836 * p_k[12] + 2069 * p_k[13] 
-# #2P6 + 7P7 + 18P8 + 49P9 + 130P10 + 333P11 + 836P12 + 2069P13
-
-
-
-     
-    
 
 
 ax = plt.gca()
