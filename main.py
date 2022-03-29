@@ -4,11 +4,12 @@ import csv
 import operator
 import matplotlib.pyplot as plt
 import math
+import random
 from scipy import special
 
 S_REG = 3  # レジスタ数
 LENGTH = 259  # 符号長
-TEST = 10  # テスト回数
+TEST = 1000  # テスト回数
 OUT_BITS = 2
 OUT_LEN = LENGTH * OUT_BITS
 K = S_REG + 1  # 拘束長
@@ -76,7 +77,7 @@ output[6, 1] = [0, 1]
 output[7, 0] = [0, 1]
 output[7, 1] = [1, 0]
 
-array = [["SNR", "BER", "NOCODE_BER","p_b"]]
+array = [["SNR", "BER", "NOCODE_BER","p_k"]]
 file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 
 # tdata: 符号化前の送信データ transmission
@@ -308,6 +309,32 @@ if __name__ == "__main__":
         # BER計算
         BER = error / (ok + error)
         NOCODE_BER = nocode_error / (nocode_ok + nocode_error)
+        
+        #理論上界計算
+
+        p_k = [0] * 14
+
+        p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10**(SNRdB/10)))
+            
+        for k in range(6,14):
+            if( k%2 == 0):
+                for e in range(k // 2 + 1,k):
+                    p_k[k] = combinations_count(k,e) * p **(e) * (1 - p) ** (k - e) 
+                    residual =  0.5 * combinations_count(k,k//2) * p ** (k//2) * (1 - p) ** (k// 2)
+                    p_k[k] += residual
+            else:
+                for e in range((k + 1) // 2, k):
+                    p_k[k] = (combinations_count(k,e) * p **(e) * (1 - p) ** (k - e))
+        
+
+        p_b = 0
+
+        p_b = 2 * p_k[6] + 7 * p_k[7] + 18 * p_k[8] + 49 * p_k[9] + 130 * p_k[10] + 333 * p_k[11] + 836 * p_k[12] + 2069 * p_k[13] 
+        #2P6 + 7P7 + 18P8 + 49P9 + 130P10 + 333P11 + 836P12 + 2069P13
+        if p_b >= 1 / 2:
+            p_b = 1 / 2
+        p_b_list.append(p_b)
+        
 
         snr_list.append(SNRdB)
         ber_list.append(BER)
@@ -315,8 +342,8 @@ if __name__ == "__main__":
 
         # 結果表示
         print(
-            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e}".format(
-                SNRdB, BER, NOCODE_BER
+            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e}, UPPER_BOUND:{3:.4e}".format(
+                SNRdB, BER, NOCODE_BER,p_b
             )
         )
         # print('NOCODE_BER:{1:.4e}'.format(*NOCODE_BER))
@@ -333,26 +360,35 @@ if __name__ == "__main__":
 fig = plt.figure()
 plt.plot(snr_list, ber_list, label="simulation(hard)", color="blue")
 plt.plot(snr_list, nocode_ber_list, label="without code", color="red")
-# plt.plot(snr_list, p_b_list, label="p_b", color="green")
+plt.plot(snr_list, p_b_list, label="p_k", color="green")
 
 
-##理論上界
+# #理論上界
 # x = np.linspace(0,6) #x = SNR
-# p_b = 0.0
+
+# p_k = [0] * 14
 
 # p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10**(x/10)))
        
-# for k in range(17):
+# for k in range(6,14):
 #     if( k%2 == 0):
 #         for e in range(k // 2 + 1,k):
-#             p_b +=  combinations_count(k,e) * p**(e) * (1 - p) ** (k - e) + 0.5 * combinations_count(k,k//2) * p ** (2//k) * (1 - p) ** (k // 2)
+#             p_k[k] = combinations_count(k,e) * p **(e) * (1 - p) ** (k - e) 
+#             residual =  0.5 * combinations_count(k,k//2) * p ** (k//2) * (1 - p) ** (k// 2)
+#             p_k[k] += residual
 #     else:
 #         for e in range((k + 1) // 2, k):
-#             p_b +=combinations_count(k,e) * p **(e) * (1 - p) ** (k - e)
-# plt.plot(x, p_b)
+#             p_k[k] = (combinations_count(k,e) * p **(e) * (1 - p) ** (k - e))
+# #plt.plot(x, p_k)
+
+# p_b = 0
+
+# p_b = 2 * p_k[6] + 7 * p_k[7] + 18 * p_k[8] + 49 * p_k[9] + 130 * p_k[10] + 333 * p_k[11] + 836 * p_k[12] + 2069 * p_k[13] 
+# #2P6 + 7P7 + 18P8 + 49P9 + 130P10 + 333P11 + 836P12 + 2069P13
 
 
-        
+
+     
     
 
 
