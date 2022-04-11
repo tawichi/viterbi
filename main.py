@@ -12,7 +12,7 @@ from scipy import special
 
 S_REG = 3  # レジスタ数(前後半共通)
 LENGTH = 259  # 符号長
-TEST = 100  # テスト回数
+TEST = 1000  # テスト回数
 OUT_BITS = 2  # 後半組は3
 OUT_LEN = LENGTH * OUT_BITS #777
 K = S_REG + 1  # 拘束長は4(前後半共通)
@@ -31,8 +31,9 @@ def hamming(s1, s2):
     # ハミング距離計算
     return sum(map(operator.xor, s1, s2))
   
-def distance(s1,s2):
-    return  np.dot(s1,s2)
+def distance(s1,s2,i,j):
+    np.place(s1, s1== 0, -1)
+    return  np.dot(s1,s2,h_channel[i][j])
 
 
 def convolutional_encoder(data, state):
@@ -70,7 +71,7 @@ p_b_list = []
 
 # 各時間，各状態において，ハミング距離を記録する
 # metric[状態][時刻]
-metric = 10000 * np.ones((STATE_NUM, LENGTH + 1), dtype=float)
+metric = -10000 * np.ones((STATE_NUM, LENGTH + 1), dtype=float)
 metric[0][0] = 0
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
 # path[状態][時刻][[前状態,入力]]
@@ -96,6 +97,27 @@ output[6, 0] = [1, 0]
 output[6, 1] = [0, 1]
 output[7, 0] = [0, 1]
 output[7, 1] = [1, 0]
+
+hugou = np.zeros((STATE_NUM, 2, OUT_BITS), dtype=int)
+hugou[0, 0] = [-1, -1]
+hugou[0, 1] = [1, 1]
+hugou[1, 0] = [1, 1]
+hugou[1, 1] = [-1, -1]
+hugou[2, 0] = [-1, 1]
+hugou[2, 1] = [1, -1]
+hugou[3, 0] = [1, -1]
+hugou[3, 1] = [-1, 1]
+hugou[4, 0] = [1, 1]
+hugou[4, 1] = [-1, -1]
+hugou[5, 0] = [-1, -1]
+hugou[5, 1] = [1, 1]
+hugou[6, 0] = [1, -1]
+hugou[6, 1] = [-1, 1]
+hugou[7, 0] = [-1, 1]
+hugou[7, 1] = [1, -1]
+
+
+
 
 array = [["SNR", "BER", "NOCODE_BER", "p_k"]]
 file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
@@ -166,25 +188,26 @@ if __name__ == "__main__":
                 r_pair = [0] * OUT_BITS
 
                 r_pair = np.append(receive[i][2 * j], receive[i][2 * j + 1])
+                h_pair = np.append(h_channel[i][2*j], h_channel[i][2 * j + 1])
 
                 if j == 0:
                     metric[0][0] = 0
-                    metric[0][1] = metric[0][0] + distance(output[0][0], r_pair)
-                    metric[1][1] = metric[0][0] + distance(output[0][1], r_pair)
+                    metric[0][1] = metric[0][0] + np.sum(hugou[0][0]*r_pair* h_pair)
+                    metric[1][1] = metric[0][0] + np.sum(hugou[0][1]*r_pair *h_pair)
 
-                    # metric[0][2] = metric[0][1] + distance(output[0][0], r_pair)
-                    # metric[1][2] = metric[0][1] + distance(output[0][1], r_pair)
-                    # metric[2][2] = metric[1][1] + distance(output[1][0], r_pair)
-                    # metric[3][2] = metric[1][1] + distance(output[1][1], r_pair)
+                    # metric[0][2] = metric[0][1] + distance(hugou[0][0], r_pair)
+                    # metric[1][2] = metric[0][1] + distance(hugou[0][1], r_pair)
+                    # metric[2][2] = metric[1][1] + distance(hugou[1][0], r_pair)
+                    # metric[3][2] = metric[1][1] + distance(hugou[1][1], r_pair)
 
-                    # metric[0][3] = metric[0][2] + distance(output[0][0], r_pair)
-                    # metric[1][3] = metric[0][2] + distance(output[0][1], r_pair)
-                    # metric[2][3] = metric[1][2] + distance(output[1][0], r_pair)
-                    # metric[3][3] = metric[1][2] + distance(output[1][1], r_pair)
-                    # metric[4][3] = metric[2][2] + distance(output[2][0], r_pair)
-                    # metric[5][3] = metric[2][2] + distance(output[2][1], r_pair)
-                    # metric[6][3] = metric[3][3] + distance(output[3][0], r_pair)
-                    # metric[7][3] = metric[3][3] + distance(output[3][1], r_pair)
+                    # metric[0][3] = metric[0][2] + distance(hugou[0][0], r_pair)
+                    # metric[1][3] = metric[0][2] + distance(hugou[0][1], r_pair)
+                    # metric[2][3] = metric[1][2] + distance(hugou[1][0], r_pair)
+                    # metric[3][3] = metric[1][2] + distance(hugou[1][1], r_pair)
+                    # metric[4][3] = metric[2][2] + distance(hugou[2][0], r_pair)
+                    # metric[5][3] = metric[2][2] + distance(hugou[2][1], r_pair)
+                    # metric[6][3] = metric[3][3] + distance(hugou[3][0], r_pair)
+                    # metric[7][3] = metric[3][3] + distance(hugou[3][1], r_pair)
 
                 else:
 
@@ -202,104 +225,104 @@ if __name__ == "__main__":
 
                     # 状態0
                     # 左辺の方がパスメトリック小さい場合
-                    if (metric[0][j - 1] + distance(output[0][0], r_pair)) > (
-                        metric[4][j - 1] + distance(output[4][0], r_pair)
+                    if (metric[0][j - 1] + np.sum(hugou[0][0] * r_pair * h_pair)) > (
+                        metric[4][j - 1] + np.sum(hugou[4][0] * r_pair * h_pair)
                     ):
-                        metric[0][j] = metric[0][j - 1] + distance(
-                            output[0][0], r_pair
+                        metric[0][j] = metric[0][j - 1] + np.sum(
+                            hugou[0][0] * r_pair * h_pair
                         )  # ハミング距離更新．(状態0時刻jのハミング距離を求める)
                         path[0][j] = [0, 0]  # パスの記録(状態0からの入力0)
 
                     # 右辺の方がパスメトリック小さい場合
                     else:
-                        metric[0][j] = metric[4][j - 1] + distance(
-                            output[4][0], r_pair
+                        metric[0][j] = metric[4][j - 1] + np.sum(
+                            hugou[4][0]* r_pair * h_pair
                         )  # ハミング距離更新
                         path[0][j] = [4, 0]  # パスの記録，(状態4からの入力0)
 
                     # 状態1
-                    if (metric[0][j - 1] + distance(output[0][1], r_pair)) > (
-                        metric[4][j - 1] + distance(output[4][1], r_pair)
+                    if (metric[0][j - 1] + np.sum(hugou[0][1] * r_pair * h_pair)) > (
+                        metric[4][j - 1] + np.sum(hugou[4][1] * r_pair * h_pair)
                     ):  # 状態1時刻jのハミング距離を求める
-                        metric[1][j] = metric[0][j - 1] + distance(output[0][1], r_pair)
+                        metric[1][j] = metric[0][j - 1] + np.sum(hugou[0][1] * r_pair * h_pair)
                         path[1][j] = [0, 1]  # 状態1に来るパスは，状態0からの入力1
 
                     else:
-                        metric[1][j] = metric[4][j - 1] + distance(
-                            output[4][1], r_pair
+                        metric[1][j] = metric[4][j - 1] + np.sum(
+                            hugou[4][1] * r_pair * h_pair
                         )  # 状態1時刻jのハミング距離を求める
                         path[1][j] = [4, 1]  # 状態1に来るパスは，状態4からの入力1
 
                     ##状態2
 
-                    if (metric[1][j - 1] + distance(output[1][0], r_pair)) > (
-                        metric[5][j - 1] + distance(output[5][0], r_pair)
+                    if (metric[1][j - 1] + np.sum(hugou[1][0] * r_pair * h_pair)) > (
+                        metric[5][j - 1] + np.sum(hugou[5][0] * r_pair * h_pair)
                     ):
-                        metric[2][j] = metric[1][j - 1] + distance(output[1][0], r_pair)
+                        metric[2][j] = metric[1][j - 1] + np.sum(hugou[1][0] * r_pair * h_pair)
                         path[2][j] = [1, 0]
 
                     else:
-                        metric[2][j] = metric[5][j - 1] + distance(output[5][0], r_pair)
+                        metric[2][j] = metric[5][j - 1] + np.sum(hugou[5][0] * r_pair * h_pair)
                         path[2][j] = [5, 0]
 
                     ##状態3
 
-                    if (metric[1][j - 1] + distance(output[1][1], r_pair)) > (
-                        metric[5][j - 1] + distance(output[5][1], r_pair)
+                    if (metric[1][j - 1] + np.sum(hugou[1][1] * r_pair * h_pair)) > (
+                        metric[5][j - 1] + np.sum(hugou[5][1] * r_pair * h_pair)
                     ):
-                        metric[3][j] = metric[1][j - 1] + distance(output[1][1], r_pair)
+                        metric[3][j] = metric[1][j - 1] + np.sum(hugou[1][1] * r_pair * h_pair)
                         path[3][j] = [1, 1]
 
                     else:
-                        metric[3][j] = metric[5][j - 1] + distance(output[5][1], r_pair)
+                        metric[3][j] = metric[5][j - 1] + np.sum(hugou[5][1] * r_pair * h_pair)
                         path[3][j] = [5, 1]
 
                     ##状態4
 
-                    if (metric[2][j - 1] + distance(output[2][0], r_pair)) > (
-                        metric[6][j - 1] + distance(output[6][0], r_pair)
+                    if (metric[2][j - 1] + np.sum(hugou[2][0] * r_pair * h_pair)) > (
+                        metric[6][j - 1] + np.sum(hugou[6][0] * r_pair * h_pair)
                     ):
-                        metric[4][j] = metric[2][j - 1] + distance(output[2][0], r_pair)
+                        metric[4][j] = metric[2][j - 1] + np.sum(hugou[2][0] * r_pair * h_pair)
                         path[4][j] = [2, 0]
 
                     else:
-                        metric[4][j] = metric[6][j - 1] + distance(output[6][0], r_pair)
+                        metric[4][j] = metric[6][j - 1] + np.sum(hugou[6][0] * r_pair * h_pair)
                         path[4][j] = [6, 0]
 
                     ##状態5
 
-                    if (metric[2][j - 1] + distance(output[2][1], r_pair)) > (
-                        metric[6][j - 1] + distance(output[6][1], r_pair)
+                    if (metric[2][j - 1] + np.sum(hugou[2][1] * r_pair * h_pair)) > (
+                        metric[6][j - 1] + np.sum(hugou[6][1] * r_pair * h_pair)
                     ):
-                        metric[5][j] = metric[2][j - 1] + distance(output[2][1], r_pair)
+                        metric[5][j] = metric[2][j - 1] + np.sum(hugou[2][1] * r_pair * h_pair)
                         path[5][j] = [2, 1]
 
                     else:
-                        metric[5][j] = metric[6][j - 1] + distance(output[6][1], r_pair)
+                        metric[5][j] = metric[6][j - 1] + np.sum(hugou[6][1] * r_pair * h_pair)
                         path[5][j] = [6, 1]
 
                     ##状態6
 
-                    if (metric[3][j - 1] + distance(output[3][0], r_pair)) > (
-                        metric[7][j - 1] + distance(output[7][0], r_pair)
+                    if (metric[3][j - 1] + np.sum(hugou[3][0] * r_pair * h_pair)) > (
+                        metric[7][j - 1] + np.sum(hugou[7][0] * r_pair * h_pair)
                     ):
-                        metric[6][j] = metric[3][j - 1] + distance(output[3][0], r_pair)
+                        metric[6][j] = metric[3][j - 1] + np.sum(hugou[3][0] * r_pair * h_pair)
                         path[6][j] = [3, 0]
 
                     else:
-                        metric[6][j] = metric[7][j - 1] + distance(output[7][0], r_pair)
+                        metric[6][j] = metric[7][j - 1] + np.sum(hugou[7][0] * r_pair * h_pair)
                         path[6][j] = [7, 0]
 
                     ##状態7
 
-                    if (metric[3][j - 1] + distance(output[3][1], r_pair)) > (
-                        metric[7][j - 1] + distance(output[7][1], r_pair)
+                    if (metric[3][j - 1] + np.sum(hugou[3][1] * r_pair * h_pair)) > (
+                        metric[7][j - 1] + np.sum(hugou[7][1] * r_pair * h_pair)
                     ):
-                        metric[7][j] = metric[3][j - 1] + distance(output[3][1], r_pair)
+                        metric[7][j] = metric[3][j - 1] + np.sum(hugou[3][1] * r_pair * h_pair)
                         path[7][j] = [3, 1]
 
                     else:
-                        metric[7][j] = metric[7][j - 1] + distance(output[7][1], r_pair)
+                        metric[7][j] = metric[7][j - 1] + np.sum(hugou[7][1] * r_pair * h_pair)
                         path[7][j] = [7, 1]
 
                 # path[0][0] = [0, 0]
