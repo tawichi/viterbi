@@ -1,3 +1,5 @@
+#軟判定
+from tkinter import LEFT
 from turtle import color
 import numpy as np
 import csv
@@ -10,7 +12,7 @@ from scipy import special
 
 S_REG = 3  # レジスタ数(前後半共通)
 LENGTH = 259  # 符号長
-TEST = 1  # テスト回数
+TEST = 100  # テスト回数
 OUT_BITS = 2  # 後半組は3
 OUT_LEN = LENGTH * OUT_BITS #777
 K = S_REG + 1  # 拘束長は4(前後半共通)
@@ -30,7 +32,7 @@ def hamming(s1, s2):
     return sum(map(operator.xor, s1, s2))
   
 def distance(s1,s2):
-    return  sum(abs(s1 - s2))
+    return  np.dot(s1,s2)
 
 
 def convolutional_encoder(data, state):
@@ -45,8 +47,13 @@ def combinations_count(n, r):
 
 
 # 初期化
-tdata = rdata = np.zeros((TEST, LENGTH), dtype=float)
-tcode = rcode =  rayleigh =  np.zeros((TEST, OUT_LEN), dtype=float)
+tdata =  np.zeros((TEST, LENGTH), dtype=int)
+rdata =  np.zeros((TEST, LENGTH), dtype=int)
+tcode =  np.zeros((TEST, OUT_LEN), dtype=int)
+receive =  np.zeros((TEST, OUT_LEN), dtype=float)
+# TODO レイリーチャネルの生成
+h_channel = np.random.rayleigh(scale = 1,size = (TEST,OUT_LEN))
+h_nocode = np.random.rayleigh(scale = 1,size = (TEST,LENGTH))
 state = 0
 snr_list = []
 ber_list = []
@@ -62,17 +69,17 @@ p_b_list = []
 
 
 # 各時間，各状態において，ハミング距離を記録する
-# h[状態][時刻]
-h = 10000 * np.ones((STATE_NUM, LENGTH + 1), dtype=float)
-h[0][0] = 0
+# metric[状態][時刻]
+metric = 10000 * np.ones((STATE_NUM, LENGTH + 1), dtype=float)
+metric[0][0] = 0
 ##各時間(260)，各状態(8)へのパス(2;どの状態からどの入力)を記録する
 # path[状態][時刻][[前状態,入力]]
-path = np.zeros((STATE_NUM, LENGTH, 2), dtype=float)
+path = np.zeros((STATE_NUM, LENGTH, 2), dtype=int)
 transmit = receive = np.zeros((TEST, OUT_LEN))
-nocode_transmit = nocode_receive = nocode_demo = np.zeros((TEST, LENGTH))
+nocode_transmit = nocode_receive = nocode_demo = nocode_rayleigh_recieve = nocode_rayleith_demo= np.zeros((TEST, LENGTH))
 # 状態と入力が決まると，出力が決まる3次元配列
 # output[状態][入力][出力]
-output = np.zeros((STATE_NUM, 2, OUT_BITS), dtype=float)
+output = np.zeros((STATE_NUM, 2, OUT_BITS), dtype=int)
 output[0, 0] = [0, 0]
 output[0, 1] = [1, 1]
 output[1, 0] = [1, 1]
@@ -95,7 +102,7 @@ file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 
 # tdata: 符号化前の送信データ transmission
 # tcode: 符号化後の送信データ
-# rdata: 復号化前の受信データ recieve
+# rdata: 復号化前の受信データ receive
 # rcode: 復号化後の受信データ
 # transmit: 送信信号
 # receive: 受信信号
@@ -114,11 +121,15 @@ if __name__ == "__main__":
         rdata = np.zeros((TEST, LENGTH), dtype=float)
 
         # 終端ビット系列の付加h
-        end = np.zeros((TEST, S_REG), dtype=float)
+        end = np.zeros((TEST, S_REG), dtype=int)
         tdata = np.append(tdata, end, axis=1)
 
         # 畳み込み符号化
         for i in range(TEST):
+            
+            
+            
+            
             for k in range(OUT_LEN):
                 test = (randn(1, 1) + 1j * randn(1, 1)) * 1 / np.sqrt(2)
                 
@@ -137,12 +148,12 @@ if __name__ == "__main__":
         nocode_transmit[tdata == 1] = 1
 
         # 伝送
-        receive = rayleigh * transmit + awgn(SNRdB, (TEST, OUT_LEN))
+        receive = h_channel * transmit + awgn(SNRdB, (TEST, OUT_LEN))
         nocode_receive = nocode_transmit + awgn(SNRdB, (TEST, LENGTH))
+        nocode_rayleith_demo = h_nocode * nocode_transmit+ awgn(SNRdB,(TEST,LENGTH))
 
         # BPSK復調
         #rcode[receive < 0] = 0
-        #rcode[receive >= 0] = 1
 
         nocode_demo[nocode_receive < 0] = 0
         nocode_demo[nocode_receive >= 0] = 1
@@ -151,28 +162,29 @@ if __name__ == "__main__":
         # ビタビ復号
         for i in range(TEST):
             for j in range(LENGTH):
+                # TODO メトリックの書き換え
                 r_pair = [0] * OUT_BITS
 
-                r_pair = np.append(rcode[i][2 * j], rcode[i][2 * j + 1])
+                r_pair = np.append(receive[i][2 * j], receive[i][2 * j + 1])
 
                 if j == 0:
-                    h[0][0] = 0
-                    h[0][1] = h[0][0] + distance(output[0][0], r_pair)
-                    h[1][1] = h[0][0] + distance(output[0][1], r_pair)
+                    metric[0][0] = 0
+                    metric[0][1] = metric[0][0] + distance(output[0][0], r_pair)
+                    metric[1][1] = metric[0][0] + distance(output[0][1], r_pair)
 
-                    # h[0][2] = h[0][1] + distance(output[0][0], r_pair)
-                    # h[1][2] = h[0][1] + distance(output[0][1], r_pair)
-                    # h[2][2] = h[1][1] + distance(output[1][0], r_pair)
-                    # h[3][2] = h[1][1] + distance(output[1][1], r_pair)
+                    # metric[0][2] = metric[0][1] + distance(output[0][0], r_pair)
+                    # metric[1][2] = metric[0][1] + distance(output[0][1], r_pair)
+                    # metric[2][2] = metric[1][1] + distance(output[1][0], r_pair)
+                    # metric[3][2] = metric[1][1] + distance(output[1][1], r_pair)
 
-                    # h[0][3] = h[0][2] + distance(output[0][0], r_pair)
-                    # h[1][3] = h[0][2] + distance(output[0][1], r_pair)
-                    # h[2][3] = h[1][2] + distance(output[1][0], r_pair)
-                    # h[3][3] = h[1][2] + distance(output[1][1], r_pair)
-                    # h[4][3] = h[2][2] + distance(output[2][0], r_pair)
-                    # h[5][3] = h[2][2] + distance(output[2][1], r_pair)
-                    # h[6][3] = h[3][3] + distance(output[3][0], r_pair)
-                    # h[7][3] = h[3][3] + distance(output[3][1], r_pair)
+                    # metric[0][3] = metric[0][2] + distance(output[0][0], r_pair)
+                    # metric[1][3] = metric[0][2] + distance(output[0][1], r_pair)
+                    # metric[2][3] = metric[1][2] + distance(output[1][0], r_pair)
+                    # metric[3][3] = metric[1][2] + distance(output[1][1], r_pair)
+                    # metric[4][3] = metric[2][2] + distance(output[2][0], r_pair)
+                    # metric[5][3] = metric[2][2] + distance(output[2][1], r_pair)
+                    # metric[6][3] = metric[3][3] + distance(output[3][0], r_pair)
+                    # metric[7][3] = metric[3][3] + distance(output[3][1], r_pair)
 
                 else:
 
@@ -180,114 +192,114 @@ if __name__ == "__main__":
 
                     # template
 
-                    # if (h[状態a][j-1]+distance(output[状態a][入力a],r_pair)) <(h[状態b][j-1] + distance(output[状態b][入力b],r_pair)):
-                    #     h[2][j] = 前者
+                    # if (metric[状態a][j-1]+distance(output[状態a][入力a],r_pair)) <(metric[状態b][j-1] + distance(output[状態b][入力b],r_pair)):
+                    #     metric[2][j] = 前者
                     #     path[2][j]  = [状態a,入力a]
 
                     # else:
-                    #     h[2][j] =後者
+                    #     metric[2][j] =後者
                     #     path[2][j]  =[状態b,入力b]
 
                     # 状態0
                     # 左辺の方がパスメトリック小さい場合
-                    if (h[0][j - 1] + distance(output[0][0], r_pair)) < (
-                        h[4][j - 1] + distance(output[4][0], r_pair)
+                    if (metric[0][j - 1] + distance(output[0][0], r_pair)) > (
+                        metric[4][j - 1] + distance(output[4][0], r_pair)
                     ):
-                        h[0][j] = h[0][j - 1] + distance(
+                        metric[0][j] = metric[0][j - 1] + distance(
                             output[0][0], r_pair
                         )  # ハミング距離更新．(状態0時刻jのハミング距離を求める)
                         path[0][j] = [0, 0]  # パスの記録(状態0からの入力0)
 
                     # 右辺の方がパスメトリック小さい場合
                     else:
-                        h[0][j] = h[4][j - 1] + distance(
+                        metric[0][j] = metric[4][j - 1] + distance(
                             output[4][0], r_pair
                         )  # ハミング距離更新
                         path[0][j] = [4, 0]  # パスの記録，(状態4からの入力0)
 
                     # 状態1
-                    if (h[0][j - 1] + distance(output[0][1], r_pair)) < (
-                        h[4][j - 1] + distance(output[4][1], r_pair)
+                    if (metric[0][j - 1] + distance(output[0][1], r_pair)) > (
+                        metric[4][j - 1] + distance(output[4][1], r_pair)
                     ):  # 状態1時刻jのハミング距離を求める
-                        h[1][j] = h[0][j - 1] + distance(output[0][1], r_pair)
+                        metric[1][j] = metric[0][j - 1] + distance(output[0][1], r_pair)
                         path[1][j] = [0, 1]  # 状態1に来るパスは，状態0からの入力1
 
                     else:
-                        h[1][j] = h[4][j - 1] + distance(
+                        metric[1][j] = metric[4][j - 1] + distance(
                             output[4][1], r_pair
                         )  # 状態1時刻jのハミング距離を求める
                         path[1][j] = [4, 1]  # 状態1に来るパスは，状態4からの入力1
 
                     ##状態2
 
-                    if (h[1][j - 1] + distance(output[1][0], r_pair)) < (
-                        h[5][j - 1] + distance(output[5][0], r_pair)
+                    if (metric[1][j - 1] + distance(output[1][0], r_pair)) > (
+                        metric[5][j - 1] + distance(output[5][0], r_pair)
                     ):
-                        h[2][j] = h[1][j - 1] + distance(output[1][0], r_pair)
+                        metric[2][j] = metric[1][j - 1] + distance(output[1][0], r_pair)
                         path[2][j] = [1, 0]
 
                     else:
-                        h[2][j] = h[5][j - 1] + distance(output[5][0], r_pair)
+                        metric[2][j] = metric[5][j - 1] + distance(output[5][0], r_pair)
                         path[2][j] = [5, 0]
 
                     ##状態3
 
-                    if (h[1][j - 1] + distance(output[1][1], r_pair)) < (
-                        h[5][j - 1] + distance(output[5][1], r_pair)
+                    if (metric[1][j - 1] + distance(output[1][1], r_pair)) > (
+                        metric[5][j - 1] + distance(output[5][1], r_pair)
                     ):
-                        h[3][j] = h[1][j - 1] + distance(output[1][1], r_pair)
+                        metric[3][j] = metric[1][j - 1] + distance(output[1][1], r_pair)
                         path[3][j] = [1, 1]
 
                     else:
-                        h[3][j] = h[5][j - 1] + distance(output[5][1], r_pair)
+                        metric[3][j] = metric[5][j - 1] + distance(output[5][1], r_pair)
                         path[3][j] = [5, 1]
 
                     ##状態4
 
-                    if (h[2][j - 1] + distance(output[2][0], r_pair)) < (
-                        h[6][j - 1] + distance(output[6][0], r_pair)
+                    if (metric[2][j - 1] + distance(output[2][0], r_pair)) > (
+                        metric[6][j - 1] + distance(output[6][0], r_pair)
                     ):
-                        h[4][j] = h[2][j - 1] + distance(output[2][0], r_pair)
+                        metric[4][j] = metric[2][j - 1] + distance(output[2][0], r_pair)
                         path[4][j] = [2, 0]
 
                     else:
-                        h[4][j] = h[6][j - 1] + distance(output[6][0], r_pair)
+                        metric[4][j] = metric[6][j - 1] + distance(output[6][0], r_pair)
                         path[4][j] = [6, 0]
 
                     ##状態5
 
-                    if (h[2][j - 1] + distance(output[2][1], r_pair)) < (
-                        h[6][j - 1] + distance(output[6][1], r_pair)
+                    if (metric[2][j - 1] + distance(output[2][1], r_pair)) > (
+                        metric[6][j - 1] + distance(output[6][1], r_pair)
                     ):
-                        h[5][j] = h[2][j - 1] + distance(output[2][1], r_pair)
+                        metric[5][j] = metric[2][j - 1] + distance(output[2][1], r_pair)
                         path[5][j] = [2, 1]
 
                     else:
-                        h[5][j] = h[6][j - 1] + distance(output[6][1], r_pair)
+                        metric[5][j] = metric[6][j - 1] + distance(output[6][1], r_pair)
                         path[5][j] = [6, 1]
 
                     ##状態6
 
-                    if (h[3][j - 1] + distance(output[3][0], r_pair)) < (
-                        h[7][j - 1] + distance(output[7][0], r_pair)
+                    if (metric[3][j - 1] + distance(output[3][0], r_pair)) > (
+                        metric[7][j - 1] + distance(output[7][0], r_pair)
                     ):
-                        h[6][j] = h[3][j - 1] + distance(output[3][0], r_pair)
+                        metric[6][j] = metric[3][j - 1] + distance(output[3][0], r_pair)
                         path[6][j] = [3, 0]
 
                     else:
-                        h[6][j] = h[7][j - 1] + distance(output[7][0], r_pair)
+                        metric[6][j] = metric[7][j - 1] + distance(output[7][0], r_pair)
                         path[6][j] = [7, 0]
 
                     ##状態7
 
-                    if (h[3][j - 1] + distance(output[3][1], r_pair)) < (
-                        h[7][j - 1] + distance(output[7][1], r_pair)
+                    if (metric[3][j - 1] + distance(output[3][1], r_pair)) > (
+                        metric[7][j - 1] + distance(output[7][1], r_pair)
                     ):
-                        h[7][j] = h[3][j - 1] + distance(output[3][1], r_pair)
+                        metric[7][j] = metric[3][j - 1] + distance(output[3][1], r_pair)
                         path[7][j] = [3, 1]
 
                     else:
-                        h[7][j] = h[7][j - 1] + distance(output[7][1], r_pair)
+                        metric[7][j] = metric[7][j - 1] + distance(output[7][1], r_pair)
                         path[7][j] = [7, 1]
 
                 # path[0][0] = [0, 0]
@@ -329,26 +341,14 @@ if __name__ == "__main__":
         BER = error / (ok + error)
         NOCODE_BER = nocode_error / (nocode_ok + nocode_error)
 
-        # 理論上界計算
+        #TODO 軟判定理論上界
+        # 硬判定理論上界計算
         p_k = [0] * 14  # 後半組は18にする
 
         p = 1 / 2 * special.erfc(np.sqrt(1 / 2 * 10 ** (SNRdB / 10)))
 
         for k in range(6, 14):  # 後半組はrange(10,18)
-            if k % 2 == 0:
-                for e in range(k // 2 + 1, k):
-                    p_k[k] = combinations_count(k, e) * p ** (e) * (1 - p) ** (k - e)
-                    residual = (
-                        0.5
-                        * combinations_count(k, k // 2)
-                        * p ** (k // 2)
-                        * (1 - p) ** (k // 2)
-                    )
-                    p_k[k] += residual
-            else:
-                for e in range((k + 1) // 2, k):
-                    p_k[k] = combinations_count(k, e) * p ** (e) * (1 - p) ** (k - e)
-
+            p_k[k] = 1 / 2 * special.erfc(np.sqrt(k* (1 / 2) * 10 ** (SNRdB / 10)))
         p_b = 0
 
         p_b = (
@@ -388,8 +388,9 @@ if __name__ == "__main__":
 
 
 fig = plt.figure()
-plt.plot(snr_list, ber_list, label="simulation(hard)", color="blue")
+plt.plot(snr_list, ber_list, label="simulation(soft)", color="blue")
 plt.plot(snr_list, nocode_ber_list, label="without coding", color="red")
+plt.plot(snr_list, nocode_ber_list, label="rayleigh without coding", color="black")
 plt.plot(snr_list, p_b_list, label="upper bound", color="green")
 
 
