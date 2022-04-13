@@ -12,7 +12,7 @@ from scipy import special
 
 S_REG = 3  # レジスタ数(前後半共通)
 LENGTH = 259  # 符号長
-TEST = 10  # テスト回数
+TEST = 100  # テスト回数
 OUT_BITS = 2  # 後半組は3
 OUT_LEN = LENGTH * OUT_BITS #777
 K = S_REG + 1  # 拘束長は4(前後半共通)
@@ -131,7 +131,7 @@ file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 # receive: 受信信号
 
 
-if __name__ == "__no_rayleigh__":
+if __name__ == "__main__":
     # 表示
     print("# SNR BER:")
     
