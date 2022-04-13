@@ -52,9 +52,14 @@ tdata =  np.zeros((TEST, LENGTH), dtype=int)
 rdata =  np.zeros((TEST, LENGTH), dtype=int)
 tcode =  np.zeros((TEST, OUT_LEN), dtype=int)
 receive =  np.zeros((TEST, OUT_LEN), dtype=float)
+# TODO レイリーチャネルの生成
+h_channel = np.random.rayleigh(scale = 1,size = (TEST,OUT_LEN))
+h_nocode = np.random.rayleigh(scale = 1,size = (TEST,LENGTH))
 state = 0
 snr_list = []
 ber_list = []
+nocode_ber_list = []
+nocode_rayleigh_ber_list = []
 p_b_list = []
 
 
@@ -73,11 +78,6 @@ metric[0][0] = 0
 # path[状態][時刻][[前状態,入力]]
 path = np.zeros((STATE_NUM, LENGTH, 2), dtype=int)
 transmit = receive = np.zeros((TEST, OUT_LEN))
-# TODO レイリーチャネルの生成
-h_channel = np.random.rayleigh(scale = 1,size = (TEST,OUT_LEN))
-h_nocode = np.random.rayleigh(scale = 1,size = (TEST,LENGTH))
-nocode_ber_list = []
-nocode_rayleigh_ber_list = []
 nocode_transmit = nocode_receive = nocode_demo = nocode_rayleigh_recieve = nocode_rayleith_demo= np.zeros((TEST, LENGTH))
 # 状態と入力が決まると，出力が決まる3次元配列
 # output[状態][入力][出力]
@@ -120,7 +120,7 @@ hugou[7, 1] = [1, -1]
 
 
 
-array = [["SNR", "BER", "NOCODE_BER","NOCODE_RAYLEIGH_BER", "p_k"]]
+array = [["SNR", "BER", "NOCODE_BER", "p_k"]]
 file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 
 # tdata: 符号化前の送信データ transmission
@@ -131,7 +131,7 @@ file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 # receive: 受信信号
 
 
-if __name__ == "__main__":
+if __name__ == "__dup__":
     # 表示
     print("# SNR BER:")
     
@@ -168,9 +168,9 @@ if __name__ == "__main__":
         nocode_transmit[tdata == 1] = 1
 
         # 伝送
-        receive = transmit + awgn(SNRdB, (TEST, OUT_LEN))
+        receive = h_channel * transmit + awgn(SNRdB, (TEST, OUT_LEN))
         nocode_receive = nocode_transmit + awgn(SNRdB, (TEST, LENGTH))
-        nocode_rayleith = h_nocode * nocode_transmit+ awgn(SNRdB,(TEST,LENGTH))
+        nocode_rayleith = h_channel[:TEST,:LENGTH] * nocode_transmit+ awgn(SNRdB,(TEST,LENGTH))
 
         # BPSK復調
         #rcode[receive < 0] = 0
@@ -180,7 +180,6 @@ if __name__ == "__main__":
         nocode_rayleith_demo[nocode_rayleith < 0] = 0
         nocode_rayleith_demo[nocode_rayleith >= 0] = 1
         print(np.count_nonzero(nocode_demo != tdata))
-        print(np.count_nonzero(nocode_rayleith_demo!= tdata))
 
         # ビタビ復号
         for i in range(TEST):
@@ -372,7 +371,7 @@ if __name__ == "__main__":
 
         # 結果表示
         print(
-            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e},NOCOXE_RAYLEIGH_BER:{3:.4e}, UPPER_BOUND:{4:.4e}".format(
+            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e},NOCOXE_RAYLEIGH_BER:{3:.4e}, UPPER_BOUND:{3:.4e}".format(
                 SNRdB, BER, NOCODE_BER, NOCODE_RAYLEIGH_BER, p_b
             )
         )
@@ -387,11 +386,10 @@ if __name__ == "__main__":
 
 
 fig = plt.figure()
-plt.plot(snr_list, ber_list, label="simulation(soft)", color="blue")
-plt.plot(snr_list, ber_list, label="simulation(soft)", color="blue")
-plt.plot(snr_list, nocode_ber_list, label="without coding", color="red")
-plt.plot(snr_list, nocode_rayleigh_ber_list, label="without coding + rayleigh", color="black")
-plt.plot(snr_list, p_b_list, label="upper bound", color="green")
+plt.plot(snr_list, ber_list, label="simulation(soft) with rayleigh", color="blue")
+plt.plot(snr_list, nocode_ber_list, label="without coding no rayleigh", color="red")
+#plt.plot(snr_list, nocode_rayleigh_ber_list, label="rayleigh without coding", color="black")
+plt.plot(snr_list, p_b_list, label="upper bound no rayleigh", color="green")
 
 
 ax = plt.gca()

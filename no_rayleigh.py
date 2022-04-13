@@ -52,9 +52,14 @@ tdata =  np.zeros((TEST, LENGTH), dtype=int)
 rdata =  np.zeros((TEST, LENGTH), dtype=int)
 tcode =  np.zeros((TEST, OUT_LEN), dtype=int)
 receive =  np.zeros((TEST, OUT_LEN), dtype=float)
+# TODO レイリーチャネルの生成
+h_channel = np.random.rayleigh(scale = 1,size = (TEST,OUT_LEN))
+h_nocode = np.random.rayleigh(scale = 1,size = (TEST,LENGTH))
 state = 0
 snr_list = []
 ber_list = []
+nocode_ber_list = []
+nocode_rayleigh_ber_list = []
 p_b_list = []
 
 
@@ -73,11 +78,6 @@ metric[0][0] = 0
 # path[状態][時刻][[前状態,入力]]
 path = np.zeros((STATE_NUM, LENGTH, 2), dtype=int)
 transmit = receive = np.zeros((TEST, OUT_LEN))
-# TODO レイリーチャネルの生成
-h_channel = np.random.rayleigh(scale = 1,size = (TEST,OUT_LEN))
-h_nocode = np.random.rayleigh(scale = 1,size = (TEST,LENGTH))
-nocode_ber_list = []
-nocode_rayleigh_ber_list = []
 nocode_transmit = nocode_receive = nocode_demo = nocode_rayleigh_recieve = nocode_rayleith_demo= np.zeros((TEST, LENGTH))
 # 状態と入力が決まると，出力が決まる3次元配列
 # output[状態][入力][出力]
@@ -120,7 +120,7 @@ hugou[7, 1] = [1, -1]
 
 
 
-array = [["SNR", "BER", "NOCODE_BER","NOCODE_RAYLEIGH_BER", "p_k"]]
+array = [["SNR", "BER", "NOCODE_BER", "p_k"]]
 file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 
 # tdata: 符号化前の送信データ transmission
@@ -131,7 +131,7 @@ file_path = "./test.csv"  # CSVの書き込みpath．任意で変えて．
 # receive: 受信信号
 
 
-if __name__ == "__main__":
+if __name__ == "__no_rayleigh__":
     # 表示
     print("# SNR BER:")
     
@@ -149,6 +149,9 @@ if __name__ == "__main__":
 
         # 畳み込み符号化
         for i in range(TEST):
+            
+            
+            
             
             for k in range(OUT_LEN):
                 test = (randn(1, 1) + 1j * randn(1, 1)) * 1 / np.sqrt(2)
@@ -180,7 +183,6 @@ if __name__ == "__main__":
         nocode_rayleith_demo[nocode_rayleith < 0] = 0
         nocode_rayleith_demo[nocode_rayleith >= 0] = 1
         print(np.count_nonzero(nocode_demo != tdata))
-        print(np.count_nonzero(nocode_rayleith_demo!= tdata))
 
         # ビタビ復号
         for i in range(TEST):
@@ -189,13 +191,26 @@ if __name__ == "__main__":
                 r_pair = [0] * OUT_BITS
 
                 r_pair = np.append(receive[i][2 * j], receive[i][2 * j + 1])
-                h_pair = np.append(h_channel[i][2*j], h_channel[i][2 * j + 1])
+                #h_pair = np.append(h_channel[i][2*j], h_channel[i][2 * j + 1])
 
                 if j == 0:
                     metric[0][0] = 0
-                    metric[0][1] = metric[0][0] + np.sum(hugou[0][0]*r_pair* h_pair)
-                    metric[1][1] = metric[0][0] + np.sum(hugou[0][1]*r_pair *h_pair)
+                    metric[0][1] = metric[0][0] + np.sum(hugou[0][0]*r_pair)
+                    metric[1][1] = metric[0][0] + np.sum(hugou[0][1]*r_pair)
 
+                    # metric[0][2] = metric[0][1] + distance(hugou[0][0], r_pair)
+                    # metric[1][2] = metric[0][1] + distance(hugou[0][1], r_pair)
+                    # metric[2][2] = metric[1][1] + distance(hugou[1][0], r_pair)
+                    # metric[3][2] = metric[1][1] + distance(hugou[1][1], r_pair)
+
+                    # metric[0][3] = metric[0][2] + distance(hugou[0][0], r_pair)
+                    # metric[1][3] = metric[0][2] + distance(hugou[0][1], r_pair)
+                    # metric[2][3] = metric[1][2] + distance(hugou[1][0], r_pair)
+                    # metric[3][3] = metric[1][2] + distance(hugou[1][1], r_pair)
+                    # metric[4][3] = metric[2][2] + distance(hugou[2][0], r_pair)
+                    # metric[5][3] = metric[2][2] + distance(hugou[2][1], r_pair)
+                    # metric[6][3] = metric[3][3] + distance(hugou[3][0], r_pair)
+                    # metric[7][3] = metric[3][3] + distance(hugou[3][1], r_pair)
 
                 else:
 
@@ -213,105 +228,121 @@ if __name__ == "__main__":
 
                     # 状態0
                     # 左辺の方がパスメトリック小さい場合
-                    if (metric[0][j - 1] + np.sum(hugou[0][0] * r_pair * h_pair)) > (
-                        metric[4][j - 1] + np.sum(hugou[4][0] * r_pair * h_pair)
+                    if (metric[0][j - 1] + np.sum(hugou[0][0] * r_pair)) > (
+                        metric[4][j - 1] + np.sum(hugou[4][0] * r_pair)
                     ):
                         metric[0][j] = metric[0][j - 1] + np.sum(
-                            hugou[0][0] * r_pair * h_pair
+                            hugou[0][0] * r_pair
                         )  # ハミング距離更新．(状態0時刻jのハミング距離を求める)
                         path[0][j] = [0, 0]  # パスの記録(状態0からの入力0)
 
                     # 右辺の方がパスメトリック小さい場合
                     else:
                         metric[0][j] = metric[4][j - 1] + np.sum(
-                            hugou[4][0]* r_pair * h_pair
+                            hugou[4][0]* r_pair
                         )  # ハミング距離更新
                         path[0][j] = [4, 0]  # パスの記録，(状態4からの入力0)
 
                     # 状態1
-                    if (metric[0][j - 1] + np.sum(hugou[0][1] * r_pair * h_pair)) > (
-                        metric[4][j - 1] + np.sum(hugou[4][1] * r_pair * h_pair)
+                    if (metric[0][j - 1] + np.sum(hugou[0][1] * r_pair)) > (
+                        metric[4][j - 1] + np.sum(hugou[4][1] * r_pair)
                     ):  # 状態1時刻jのハミング距離を求める
-                        metric[1][j] = metric[0][j - 1] + np.sum(hugou[0][1] * r_pair * h_pair)
+                        metric[1][j] = metric[0][j - 1] + np.sum(hugou[0][1] * r_pair)
                         path[1][j] = [0, 1]  # 状態1に来るパスは，状態0からの入力1
 
                     else:
                         metric[1][j] = metric[4][j - 1] + np.sum(
-                            hugou[4][1] * r_pair * h_pair
+                            hugou[4][1] * r_pair
                         )  # 状態1時刻jのハミング距離を求める
                         path[1][j] = [4, 1]  # 状態1に来るパスは，状態4からの入力1
 
                     ##状態2
 
-                    if (metric[1][j - 1] + np.sum(hugou[1][0] * r_pair * h_pair)) > (
-                        metric[5][j - 1] + np.sum(hugou[5][0] * r_pair * h_pair)
+                    if (metric[1][j - 1] + np.sum(hugou[1][0] * r_pair)) > (
+                        metric[5][j - 1] + np.sum(hugou[5][0] * r_pair)
                     ):
-                        metric[2][j] = metric[1][j - 1] + np.sum(hugou[1][0] * r_pair * h_pair)
+                        metric[2][j] = metric[1][j - 1] + np.sum(hugou[1][0] * r_pair)
                         path[2][j] = [1, 0]
 
                     else:
-                        metric[2][j] = metric[5][j - 1] + np.sum(hugou[5][0] * r_pair * h_pair)
+                        metric[2][j] = metric[5][j - 1] + np.sum(hugou[5][0] * r_pair)
                         path[2][j] = [5, 0]
 
                     ##状態3
 
-                    if (metric[1][j - 1] + np.sum(hugou[1][1] * r_pair * h_pair)) > (
-                        metric[5][j - 1] + np.sum(hugou[5][1] * r_pair * h_pair)
+                    if (metric[1][j - 1] + np.sum(hugou[1][1] * r_pair)) > (
+                        metric[5][j - 1] + np.sum(hugou[5][1] * r_pair)
                     ):
-                        metric[3][j] = metric[1][j - 1] + np.sum(hugou[1][1] * r_pair * h_pair)
+                        metric[3][j] = metric[1][j - 1] + np.sum(hugou[1][1] * r_pair)
                         path[3][j] = [1, 1]
 
                     else:
-                        metric[3][j] = metric[5][j - 1] + np.sum(hugou[5][1] * r_pair * h_pair)
+                        metric[3][j] = metric[5][j - 1] + np.sum(hugou[5][1] * r_pair)
                         path[3][j] = [5, 1]
 
                     ##状態4
 
-                    if (metric[2][j - 1] + np.sum(hugou[2][0] * r_pair * h_pair)) > (
-                        metric[6][j - 1] + np.sum(hugou[6][0] * r_pair * h_pair)
+                    if (metric[2][j - 1] + np.sum(hugou[2][0] * r_pair)) > (
+                        metric[6][j - 1] + np.sum(hugou[6][0] * r_pair)
                     ):
-                        metric[4][j] = metric[2][j - 1] + np.sum(hugou[2][0] * r_pair * h_pair)
+                        metric[4][j] = metric[2][j - 1] + np.sum(hugou[2][0] * r_pair)
                         path[4][j] = [2, 0]
 
                     else:
-                        metric[4][j] = metric[6][j - 1] + np.sum(hugou[6][0] * r_pair * h_pair)
+                        metric[4][j] = metric[6][j - 1] + np.sum(hugou[6][0] * r_pair)
                         path[4][j] = [6, 0]
 
                     ##状態5
 
-                    if (metric[2][j - 1] + np.sum(hugou[2][1] * r_pair * h_pair)) > (
-                        metric[6][j - 1] + np.sum(hugou[6][1] * r_pair * h_pair)
+                    if (metric[2][j - 1] + np.sum(hugou[2][1] * r_pair)) > (
+                        metric[6][j - 1] + np.sum(hugou[6][1] * r_pair)
                     ):
-                        metric[5][j] = metric[2][j - 1] + np.sum(hugou[2][1] * r_pair * h_pair)
+                        metric[5][j] = metric[2][j - 1] + np.sum(hugou[2][1] * r_pair)
                         path[5][j] = [2, 1]
 
                     else:
-                        metric[5][j] = metric[6][j - 1] + np.sum(hugou[6][1] * r_pair * h_pair)
+                        metric[5][j] = metric[6][j - 1] + np.sum(hugou[6][1] * r_pair)
                         path[5][j] = [6, 1]
 
                     ##状態6
 
-                    if (metric[3][j - 1] + np.sum(hugou[3][0] * r_pair * h_pair)) > (
-                        metric[7][j - 1] + np.sum(hugou[7][0] * r_pair * h_pair)
+                    if (metric[3][j - 1] + np.sum(hugou[3][0] * r_pair)) > (
+                        metric[7][j - 1] + np.sum(hugou[7][0] * r_pair)
                     ):
-                        metric[6][j] = metric[3][j - 1] + np.sum(hugou[3][0] * r_pair * h_pair)
+                        metric[6][j] = metric[3][j - 1] + np.sum(hugou[3][0] * r_pair)
                         path[6][j] = [3, 0]
 
                     else:
-                        metric[6][j] = metric[7][j - 1] + np.sum(hugou[7][0] * r_pair * h_pair)
+                        metric[6][j] = metric[7][j - 1] + np.sum(hugou[7][0] * r_pair)
                         path[6][j] = [7, 0]
 
                     ##状態7
 
-                    if (metric[3][j - 1] + np.sum(hugou[3][1] * r_pair * h_pair)) > (
-                        metric[7][j - 1] + np.sum(hugou[7][1] * r_pair * h_pair)
+                    if (metric[3][j - 1] + np.sum(hugou[3][1] * r_pair)) > (
+                        metric[7][j - 1] + np.sum(hugou[7][1] * r_pair)
                     ):
-                        metric[7][j] = metric[3][j - 1] + np.sum(hugou[3][1] * r_pair * h_pair)
+                        metric[7][j] = metric[3][j - 1] + np.sum(hugou[3][1] * r_pair)
                         path[7][j] = [3, 1]
 
                     else:
-                        metric[7][j] = metric[7][j - 1] + np.sum(hugou[7][1] * r_pair * h_pair)
+                        metric[7][j] = metric[7][j - 1] + np.sum(hugou[7][1] * r_pair)
                         path[7][j] = [7, 1]
+
+                # path[0][0] = [0, 0]
+                # path[1][0] = [0, 1]
+                # path[0][1] = [0, 0]
+                # path[1][1] = [0, 1]
+                # path[2][1] = [1, 0]
+                # path[3][1] = [1, 1]
+
+                # path[0][2] = [0,0]
+                # path[1][2] = [0,1]
+                # path[2][2] = [1,0]
+                # path[3][2] = [1,1]
+                # path[4][2] = [2,0]
+                # path[5][2] = [2,1]
+                # path[6][2] = [3,0]
+                # path[7][2] = [3,1]
 
             # 復号系列を求める
             for t in reversed(range(LENGTH)):
@@ -372,7 +403,7 @@ if __name__ == "__main__":
 
         # 結果表示
         print(
-            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e},NOCOXE_RAYLEIGH_BER:{3:.4e}, UPPER_BOUND:{4:.4e}".format(
+            "SNR: {0:.2f}, BER: {1:.4e}, NOCODE_BER:{2:.4e},NOCOXE_RAYLEIGH_BER:{3:.4e}, UPPER_BOUND:{3:.4e}".format(
                 SNRdB, BER, NOCODE_BER, NOCODE_RAYLEIGH_BER, p_b
             )
         )
@@ -387,10 +418,9 @@ if __name__ == "__main__":
 
 
 fig = plt.figure()
-plt.plot(snr_list, ber_list, label="simulation(soft)", color="blue")
-plt.plot(snr_list, ber_list, label="simulation(soft)", color="blue")
-plt.plot(snr_list, nocode_ber_list, label="without coding", color="red")
-plt.plot(snr_list, nocode_rayleigh_ber_list, label="without coding + rayleigh", color="black")
+plt.plot(snr_list, ber_list, label="simulation(soft) with rayleigh", color="blue")
+plt.plot(snr_list, nocode_ber_list, label="without coding ", color="red")
+plt.plot(snr_list, nocode_rayleigh_ber_list, label="rayleigh without coding", color="black")
 plt.plot(snr_list, p_b_list, label="upper bound", color="green")
 
 
